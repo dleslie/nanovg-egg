@@ -1,0 +1,8 @@
+;;;; opengl.setup -*- Scheme -*-
+
+((license "BSD")
+ (category io)
+ (author "Daniel J. Leslie")
+ (needs foreigners make)
+ (synopsis "NanoVG")
+ (doc-from-wiki))
