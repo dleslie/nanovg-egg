@@ -192,43 +192,15 @@ ENDC
 ;; Glyph Position
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-foreign-type glyph-position (c-pointer (struct "NVGglyphPosition")))
-
-(define glyph-position-pointer
-  (foreign-lambda* (const c-pointer) ((glyph-position gp)) "C_return(gp->str);"))
-
-(define glyph-position-x
-  (foreign-lambda* float ((glyph-position gp)) "C_return(gp->x);"))
-
-(define glyph-position-minx
-  (foreign-lambda* float ((glyph-position gp)) "C_return(gp->minx);"))
-
-(define glyph-position-maxx
-  (foreign-lambda* float ((glyph-position gp)) "C_return(gp->maxx);"))
+(define-record glyph-position
+  offset x minx maxx)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Text Row
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-foreign-type text-row (c-pointer (struct "NVGtextRow")))
-
-(define text-row-start-pointer
-  (foreign-lambda* (const c-pointer) ((text-row tr)) "C_return(tr->start);"))
-
-(define text-row-end-pointer
-  (foreign-lambda* (const c-pointer) ((text-row tr)) "C_return(tr->end);"))
-
-(define text-row-next-pointer
-  (foreign-lambda* (const c-pointer) ((text-row tr)) "C_return(tr->next);"))
-
-(define text-row-width
-  (foreign-lambda* float ((text-row tr)) "C_return(tr->width);"))
-
-(define text-row-minx
-  (foreign-lambda* float ((text-row tr)) "C_return(tr->minx);"))
-
-(define text-row-maxx
-  (foreign-lambda* float ((text-row tr)) "C_return(tr->maxx);"))
+(define-record text-row
+  start-offset end-offset next-offset width minx maxx)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Frame Control
@@ -487,13 +459,13 @@ ENDC
   (foreign-lambda integer "nvgCreateFont" context (const c-string) (const c-string)))
 
 (define (create-font/blob! context name data)
-  ((foreign-lambda integer "nvgCreateFontMem" context (const c-string) u8vector integer integer) context name blob (blob-size blob) 0))
+  ((foreign-lambda integer "nvgCreateFontMem" context (const c-string) u8vector integer integer) context name data (blob-size data) 0))
 
 (define find-font
   (foreign-lambda integer "nvgFindFont" context (const c-string)))
 
 (define font-size!
-  (foreign-lambda void "nvgFontSize" context loat))
+  (foreign-lambda void "nvgFontSize" context float))
 
 (define font-blur!
   (foreign-lambda void "nvgFontBlur" context float))
@@ -514,7 +486,7 @@ ENDC
   (foreign-lambda void "nvgFontFace" context (const c-string)))
 
 (define text!
-  (foreign-lambda void "nvgText" context loat float (const c-string) (const c-pointer)))
+  (foreign-lambda void "nvgText" context float float (const c-string) (const c-pointer)))
 
 (define text-box!
   (foreign-lambda void "nvgTextBox" context float float float (const c-string) (const c-pointer)))
@@ -528,3 +500,82 @@ ENDC
   (let* ((buf (make-f32vector 4))
 	 (advance ((foreign-lambda void "nvgTextBoxBounds" context float float float (const c-string) (const c-pointer) f32vector) context x y break-row-width string end buf)))
     (values advance buf)))
+
+(define maximum-glyph-positions (make-parameter 100))
+
+(define (text-glyph-positions context x y string)
+  (define-foreign-type glyph-position (c-pointer (struct "NVGglyphPosition")))
+
+  (define get-index
+    (foreign-lambda* size_t ((glyph-position gp) (integer offset) ((const c-string) original)) "C_return(gp[offset].str - original);"))
+
+  (define get-x
+    (foreign-lambda* float ((glyph-position gp) (integer offset)) "C_return(gp[offset].x);"))
+
+  (define get-minx
+    (foreign-lambda* float ((glyph-position gp) (integer offset)) "C_return(gp[offset].minx);"))
+
+  (define get-maxx
+    (foreign-lambda* float ((glyph-position gp) (integer offset)) "C_return(gp[offset].maxx);"))
+
+  (let* ((buf (make-blob (* (foreign-type-size "NVGglyphPosition") (maximum-glyph-positions))))
+	 (count ((foreign-lambda integer "nvgTextGlyphPositions" context float float (const c-string) (const c-string) glyph-position integer) context x y string #f buf (maximum-glyph-positions))))
+    (do ((idx count (sub1 idx))
+	 (positions '()))
+	((<= idx 0) positions)
+      (set! positions
+	(cons
+	 (let ((idx (sub1 idx)))
+	   (make-glyph-position
+	    (get-index buf idx string)
+	    (get-x buf idx)
+	    (get-minx buf idx)
+	    (get-maxx buf idx)))
+	 positions)))))
+
+(define maximum-text-rows (make-parameter 100))
+
+(define (text-metrics context)
+  (let-location ((ascender float)
+		 (descender float)
+		 (lineh float))
+    ((foreign-lambda void "nvgTextMetrics" context (c-pointer float) (c-pointer float) (c-pointer float)) context (location ascender) (location descender) (location lineh))
+    (values ascender descender lineh)))
+
+(define (text-break-lines context string row-width)
+  (define-foreign-type text-row (c-pointer (struct "NVGtextRow")))
+
+  (define get-start-index
+    (foreign-lambda* size_t ((text-row tr) (integer offset) ((const c-string) original)) "C_return(tr[offset].start - original);"))
+
+  (define get-end-index
+    (foreign-lambda* size_t ((text-row tr) (integer offset) ((const c-string) original)) "C_return(tr[offset].end - original);"))
+
+  (define get-next-index
+    (foreign-lambda* size_t ((text-row tr) (integer offset) ((const c-string) original)) "C_return(tr[offset].next - original);"))
+
+  (define get-width
+    (foreign-lambda* float ((text-row tr) (integer offset)) "C_return(tr[offset].width);"))
+
+  (define get-minx
+    (foreign-lambda* float ((text-row tr) (integer offset)) "C_return(tr[offset].minx);"))
+
+  (define get-maxx
+    (foreign-lambda* float ((text-row tr) (integer offset)) "C_return(tr[offset].maxx);"))
+
+  (let* ((buf (make-blob (* (foreign-type-size "NVGtextRow") (maximum-text-rows))))
+	 (count ((foreign-lambda integer "nvgTextBreakLines" context (const c-string) (const c-string) float text-row integer) context string #f row-width buf (maximum-text-rows))))
+    (do ((idx count (sub1 idx))
+	 (rows '()))
+	((<= idx 0) rows)
+      (set! rows
+	(cons
+	 (let ((idx (sub1 idx)))
+	   (make-text-row
+	    (get-start-index buf idx string)
+	    (get-end-index buf idx string)
+	    (get-next-index buf idx string)
+	    (get-width buf idx)
+	    (get-minx buf idx)
+	    (get-maxx buf idx)))
+	 rows)))))
