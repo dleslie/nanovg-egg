@@ -145,7 +145,8 @@ ENDC
 
 (define (color-rgba color)
   (let ((buf (make-f32vector 4)))
-    ((foreign-lambda* void ((color clr) (f32vector buf)) "memcpy(buf, clr->rgba, sizeof(float) * 4);") color buf)))
+    ((foreign-lambda* void ((color clr) (f32vector buf)) "memcpy(buf, clr->rgba, sizeof(float) * 4);") color buf)
+    buf))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Paint
@@ -153,17 +154,76 @@ ENDC
 
 (define-foreign-type paint (c-pointer (struct "NVGpaint")))
 
+(define (paint-transform paint)
+  (let ((buf (make-f32vector 6)))
+    ((foreign-lambda* void ((paint p) (f32vector buf)) "memcpy(buf, p->xform, sizeof(float) * 6);") paint buf)
+    buf))
+
+(define (paint-extent paint)
+  (let ((buf (make-f32vector 2)))
+    ((foreign-lambda* void ((paint p) (f32vector buf)) "memcpy(buf, p->extent, sizeof(float) *2);") paint buf)
+    buf))
+
+(define paint-radius
+  (foreign-lambda* float ((paint p)) "C_return(p->radius);"))
+
+(define paint-feather
+  (foreign-lambda* float ((paint p)) "C_return(p->feather);"))
+
+(define (paint-inner-color paint)
+  (let ((color (make-color-uninitialized)))
+    ((foreign-lambda* void ((paint p) (color c)) "memcpy(c, &p->innerColor, sizeof(NVGcolor));") paint color)
+    color))
+
+(define (paint-outer-color paint)
+  (let ((color (make-color-uninitialized)))
+    ((foreign-lambda* void ((paint p) (color c)) "memcpy(c, &p->outerColor, sizeof(NVGcolor));") paint color)
+    color))
+
+(define paint-image
+  (foreign-lambda* integer ((paint p)) "C_return(p->image);"))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Glyph Position
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-foreign-type glyph-position (c-pointer (struct "NVGglyphPosition")))
 
+(define glyph-position-pointer
+  (foreign-lambda* (const c-pointer) ((glyph-position gp)) "C_return(gp->str);"))
+
+(define glyph-position-x
+  (foreign-lambda* float ((glyph-position gp)) "C_return(gp->x);"))
+
+(define glyph-position-minx
+  (foreign-lambda* float ((glyph-position gp)) "C_return(gp->minx);"))
+
+(define glyph-position-maxx
+  (foreign-lambda* float ((glyph-position gp)) "C_return(gp->maxx);"))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Text Row
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-foreign-type text-row (c-pointer (struct "NVGtextRow")))
+
+(define text-row-start-pointer
+  (foreign-lambda* (const c-pointer) ((text-row tr)) "C_return(tr->start);"))
+
+(define text-row-end-pointer
+  (foreign-lambda* (const c-pointer) ((text-row tr)) "C_return(tr->end);"))
+
+(define text-row-next-pointer
+  (foreign-lambda* (const c-pointer) ((text-row tr)) "C_return(tr->next);"))
+
+(define text-row-width
+  (foreign-lambda* float ((text-row tr)) "C_return(tr->width);"))
+
+(define text-row-minx
+  (foreign-lambda* float ((text-row tr)) "C_return(tr->minx);"))
+
+(define text-row-maxx
+  (foreign-lambda* float ((text-row tr)) "C_return(tr->maxx);"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Frame Control
@@ -177,3 +237,121 @@ ENDC
 
 (define end-frame
   (foreign-lambda void "nvgEndFrame" context))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; State
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define save-state
+  (foreign-lambda void "nvgSave" context))
+
+(define restore-state
+  (foreign-lambda void "nvgRestore" context))
+
+(define reset-state
+  (foreign-lambda void "nvgReset" context))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Render Styles
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define stroke-color
+  (foreign-lambda* void ((context ctx) (color clr)) "nvgStrokeColor(ctx, *clr);"))
+
+(define stroke-paint
+  (foreign-lambda* void ((context ctx) (paint pnt)) "nvgStrokePaint(ctx, *pnt);"))
+
+(define fill-color
+  (foreign-lambda* void ((context ctx) (color clr)) "nvgFillColor(ctx, *clr);"))
+
+(define fill-paint
+  (foreign-lambda* void ((context ctx) (paint pnt)) "nvgFillPaint(ctx, *pnt);"))
+
+(define miter-limit
+  (foreign-lambda void "nvgMiterLimit" context float))
+
+(define stroke-width
+  (foreign-lambda void "nvgStrokeWidth" context float))
+
+(define line-cap
+  (foreign-lambda void "nvgLineCap" context integer))
+
+(define line-join
+  (foreign-lambda void "nvgLineJoin" context integer))
+
+(define global-alpha
+  (foreign-lambda void "nvgGlobalAlpha" context float))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Transforms
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-foreign-type transform f32vector)
+
+(define reset-transform
+  (foreign-lambda void "nvgResetTransform" context))
+
+(define transform
+  (foreign-lambda* void ((context ctx) (transform t)) "nvgTransform(ctx, t[0], t[1], t[2], t[3], t[4], t[5]);"))
+
+(define translate
+  (foreign-lambda void "nvgTranslate" context float float))
+
+(define rotate
+  (foreign-lambda void "nvgRotate" context float))
+
+(define skew-x
+  (foreign-lambda void "nvgSkewX" context float))
+
+(define skew-y
+  (foreign-lambda void "nvgSkewY" context float))
+
+(define scale
+  (foreign-lambda void "nvgScale" context float float))
+
+(define (make-transform)
+  (make-f32vector 6))
+
+(define (current-transform context)
+  (let ((buf (make-transform)))
+    ((foreign-lambda void "nvgCurrentTransform" context transform) context buf)
+    buf))
+
+(define transform-identity
+  (foreign-lambda void "nvgTransformIdentity" transform))
+
+(define transform-translate
+  (foreign-lambda void "nvgTransformTranslate" transform float float))
+
+(define transform-scale
+  (foreign-lambda void "nvgTransformScale" transform float float))
+
+(define transform-rotate
+  (foreign-lambda void "nvgTransformRotate" transform float))
+
+(define transform-skew-x
+  (foreign-lambda void "nvgTransformSkewX" transform float))
+
+(define transform-skew-y
+  (foreign-lambda void "nvgTransformSkewY" transform float))
+
+(define (transform-multiply t1 t2)
+  ((foreign-lambda void "nvgTransformMultiply" transform (const transform)) t1 t2)
+  t1)
+
+(define (transform-premultiply t1 t2)
+  ((foreign-lambda void "nvgTransformPremultiply" transform (const transform)) t1 t2)
+  t1)
+
+(define (transform-point transform x y)
+  (let-location ((dx float)
+		 (dy float))
+    ((foreign-lambda void "nvgTransformPoint" (c-pointer float) (c-pointer float) (const transform) float float) (location dx) (location dy) transform x y)
+    (values dx dy)))
+
+(define degrees-to-radians
+  (foreign-lambda float "nvgDegToRad" float))
+
+(define radians-to-degrees
+  (foreign-lambda float "nvgRadToDeg" float))
+
