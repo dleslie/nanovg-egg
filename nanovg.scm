@@ -52,18 +52,18 @@ ENDC
 (define-foreign-type context (c-pointer (struct "NVGcontext")))
 
 (define create-context*
-  (cond-expand
-    (nanovg-gl2 (foreign-lambda context "nvgCreateGL2" int))
-    (nanovg-gl3 (foreign-lambda context "nvgCreateGL3" int))
-    (nanovg-gles2 (foreign-lambda context "nvgCreateGLES2" int))
-    (nanovg-gles3 (foreign-lambda context "nvgCreateGLES3" int))))
+  (case nanovg-gl-version
+    ((gl2) (foreign-lambda* context ((int flags)) "C_return((intptr_t)nvgCreateGL2(flags));"))
+    ((gl3) (foreign-lambda* context ((int flags)) "C_return((intptr_t)nvgCreateGL3(flags));"))
+    ((gles2) (foreign-lambda* context ((int flags)) "C_return((intptr_t)nvgCreateGLES2(flags));"))
+    ((gles3) (foreign-lambda* context ((int flags)) "C_return((intptr_t)nvgCreateGLES3(flags));"))))
 
 (define delete-context!
-  (cond-expand
-    (nanovg-gl2 (foreign-lambda void "nvgDeleteGL2" context))
-    (nanovg-gl3 (foreign-lambda void "nvgDeleteGL3" context))
-    (nanovg-gles2 (foreign-lambda void "nvgDeleteGLES2" context))
-    (nanovg-gles3 (foreign-lambda void "nvgDeleteGLES3" context))))
+  (case nanovg-gl-version
+    ((gl2) (foreign-lambda void "nvgDeleteGL2" context))
+    ((gl3) (foreign-lambda void "nvgDeleteGL3" context))
+    ((gles2) (foreign-lambda void "nvgDeleteGLES2" context))
+    ((gles3) (foreign-lambda void "nvgDeleteGLES3" context))))
 
 (define (create-context #!key (anti-alias #f) (stencil-strokes #f) (debug #f) (flags #f))
   (let* ((flags
