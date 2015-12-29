@@ -88,64 +88,64 @@ ENDC
 
 (define (make-color-rgb r g b)
   (let ((color (make-color-uninitialized)))
-    ((foreign-lambda* void ((color clr) (unsigned-char r) (unsigned-char g) (unsigned-char b)) "*clr = nvgRGB(r, g, b);") color r g b)
+    ((foreign-lambda* void ((color clr) (integer r) (integer g) (integer b)) "*clr = nvgRGB(r, g, b);") (location color) r g b)
     color))
 
 (define (make-color-rgbf r g b)
   (let ((color (make-color-uninitialized)))
-    ((foreign-lambda* void ((color clr) (float r) (float g) (float b)) "*clr = nvgRGBf(r, g, b);") color r g b)
+    ((foreign-lambda* void ((color clr) (float r) (float g) (float b)) "*clr = nvgRGBf(r, g, b);") (location color) r g b)
     color))
 
 (define (make-color-rgba r g b a)
   (let ((color (make-color-uninitialized)))
-    ((foreign-lambda* void ((color clr) (unsigned-char r) (unsigned-char g) (unsigned-char b) (unsigned-char a)) "*clr = nvgRGBA(r, g, b, a);") color r g b a)
+    ((foreign-lambda* void ((color clr) (integer r) (integer g) (integer b) (integer a)) "*clr = nvgRGBA(r, g, b, a);") (location color) r g b a)
     color))
 
 (define (make-color-rgbaf r g b a)
   (let ((color (make-color-uninitialized)))
-    ((foreign-lambda* void ((color clr) (float r) (float g) (float b) (float a)) "*clr = nvgRGBAf(r, g, b, a);") color r g b a)
+    ((foreign-lambda* void ((color clr) (float r) (float g) (float b) (float a)) "*clr = nvgRGBAf(r, g, b, a);") (location color) r g b a)
     color))
 
 (define (make-color-lerp clr1 clr2 u)
   (let ((color (make-color-uninitialized)))
-    ((foreign-lambda* void ((color clr) (color clr1) (color clr2) (float u)) "*clr = nvgLerpRGBA(*clr1, *clr2, u);") color clr1 clr2 u)
+    ((foreign-lambda* void ((color clr) (color clr1) (color clr2) (float u)) "*clr = nvgLerpRGBA(*clr1, *clr2, u);") (location color) clr1 clr2 u)
     color))
 
 (define (make-color-transparency clr a)
   (let ((color (make-color-uninitialized)))
-    ((foreign-lambda* void ((color clr) (color clr1) (unsigned-char a)) "*clr = nvgTransRGBA(*clr1, a);") color clr a)
+    ((foreign-lambda* void ((color clr) (color clr1) (integer a)) "*clr = nvgTransRGBA(*clr1, a);") (location color) clr a)
     color))
 
 (define (make-color-transparencyf clr a)
   (let ((color (make-color-uninitialized)))
-    ((foreign-lambda* void ((color clr) (color clr1) (float a)) "*clr = nvgTransRGBAf(*clr1, a);") color clr a)
+    ((foreign-lambda* void ((color clr) (color clr1) (float a)) "*clr = nvgTransRGBAf(*clr1, a);") (location color) clr a)
     color))
 
 (define (make-color-hsl h s l)
   (let ((color (make-color-uninitialized)))
-    ((foreign-lambda* void ((color clr) (float h) (float s) (float l)) "*clr = nvgHSL(h, s, l);") color h s l)
+    ((foreign-lambda* void ((color clr) (float h) (float s) (float l)) "*clr = nvgHSL(h, s, l);") (location color) h s l)
     color))
 
 (define (make-color-hsla h s l a)
   (let ((color (make-color-uninitialized)))
-    ((foreign-lambda* void ((color clr) (float h) (float s) (float l) (float a)) "*clr = nvgHSLA(h, s, l, a);") color h s l a)
+    ((foreign-lambda* void ((color clr) (float h) (float s) (float l) (float a)) "*clr = nvgHSLA(h, s, l, a);") (location color) h s l a)
     color))
 
-(define color-red
-  (foreign-lambda* float ((color clr)) "C_return(clr->r);"))
+(define (color-red color)
+  ((foreign-lambda* float ((color clr)) "C_return(clr->r);") (location color)))
 
-(define color-green
-  (foreign-lambda* float ((color clr)) "C_return(clr->g);"))
+(define (color-green color)
+  ((foreign-lambda* float ((color clr)) "C_return(clr->g);") (location color)))
 
-(define color-blue
-  (foreign-lambda* float ((color clr)) "C_return(clr->b);"))
+(define (color-blue color)
+  ((foreign-lambda* float ((color clr)) "C_return(clr->b);") (location color)))
 
-(define color-alpha
-  (foreign-lambda* float ((color clr)) "C_return(clr->a);"))
+(define (color-alpha color)
+  ((foreign-lambda* float ((color clr)) "C_return(clr->a);") (location color)))
 
 (define (color-rgba color)
   (let ((buf (make-f32vector 4)))
-    ((foreign-lambda* void ((color clr) (f32vector buf)) "memcpy(buf, clr->rgba, sizeof(float) * 4);") color buf)
+    ((foreign-lambda* void ((color clr) (f32vector buf)) "memcpy(buf, clr->rgba, sizeof(float) * 4);") (location color) buf)
     buf))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -161,32 +161,32 @@ ENDC
 
 (define (paint-transform paint)
   (let ((buf (make-f32vector 6)))
-    ((foreign-lambda* void ((paint p) (f32vector buf)) "memcpy(buf, p->xform, sizeof(float) * 6);") paint buf)
+    ((foreign-lambda* void ((paint p) (f32vector buf)) "memcpy(buf, p->xform, sizeof(float) * 6);") (location paint) buf)
     buf))
 
 (define (paint-extent paint)
   (let ((buf (make-f32vector 2)))
-    ((foreign-lambda* void ((paint p) (f32vector buf)) "memcpy(buf, p->extent, sizeof(float) *2);") paint buf)
+    ((foreign-lambda* void ((paint p) (f32vector buf)) "memcpy(buf, p->extent, sizeof(float) *2);") (location paint) buf)
     buf))
 
-(define paint-radius
-  (foreign-lambda* float ((paint p)) "C_return(p->radius);"))
+(define (paint-radius paint)
+  ((foreign-lambda* float ((paint p)) "C_return(p->radius);") (location paint)))
 
-(define paint-feather
-  (foreign-lambda* float ((paint p)) "C_return(p->feather);"))
+(define (paint-feather paint)
+  ((foreign-lambda* float ((paint p)) "C_return(p->feather);") (location paint)))
 
 (define (paint-inner-color paint)
   (let ((color (make-color-uninitialized)))
-    ((foreign-lambda* void ((paint p) (color c)) "memcpy(c, &p->innerColor, sizeof(NVGcolor));") paint color)
+    ((foreign-lambda* void ((paint p) (color c)) "memcpy(c, &p->innerColor, sizeof(NVGcolor));") (location paint) color)
     color))
 
 (define (paint-outer-color paint)
   (let ((color (make-color-uninitialized)))
-    ((foreign-lambda* void ((paint p) (color c)) "memcpy(c, &p->outerColor, sizeof(NVGcolor));") paint color)
+    ((foreign-lambda* void ((paint p) (color c)) "memcpy(c, &p->outerColor, sizeof(NVGcolor));") (location paint) color)
     color))
 
-(define paint-image
-  (foreign-lambda* integer ((paint p)) "C_return(p->image);"))
+(define (paint-image paint)
+  ((foreign-lambda* integer ((paint p)) "C_return(p->image);") (location paint)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Glyph Position
@@ -228,21 +228,29 @@ ENDC
 (define reset-state!
   (foreign-lambda void "nvgReset" context))
 
+(define-syntax with-state!
+  (syntax-rules ()
+    ((with-state ctx . rest)
+     (begin
+       (save-state! ctx)
+       (begin . rest)
+       (restore-state! ctx)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Render Styles
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define stroke-color!
-  (foreign-lambda* void ((context ctx) (color clr)) "nvgStrokeColor(ctx, *clr);"))
+(define (stroke-color! context color)
+  ((foreign-lambda* void ((context ctx) (color clr)) "nvgStrokeColor(ctx, *clr);") context (location color)))
 
-(define stroke-paint!
-  (foreign-lambda* void ((context ctx) (paint pnt)) "nvgStrokePaint(ctx, *pnt);"))
+(define (stroke-paint! context paint)
+  ((foreign-lambda* void ((context ctx) (paint pnt)) "nvgStrokePaint(ctx, *pnt);") context (location paint)))
 
-(define fill-color!
-  (foreign-lambda* void ((context ctx) (color clr)) "nvgFillColor(ctx, *clr);"))
+(define (fill-color! context color)
+  ((foreign-lambda* void ((context ctx) (color clr)) "nvgFillColor(ctx, *clr);") context (location color)))
 
-(define fill-paint!
-  (foreign-lambda* void ((context ctx) (paint pnt)) "nvgFillPaint(ctx, *pnt);"))
+(define (fill-paint! context paint)
+  ((foreign-lambda* void ((context ctx) (paint pnt)) "nvgFillPaint(ctx, *pnt);") context (location paint)))
 
 (define miter-limit!
   (foreign-lambda void "nvgMiterLimit" context float))
@@ -361,24 +369,24 @@ ENDC
 ;; Paints
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (linear-gradient context sx sy ex ey icolor ocolor)
+(define (make-linear-gradient context sx sy ex ey icolor ocolor)
   (let ((out (make-paint-uninitialized)))
-    ((foreign-lambda* void ((paint p) (context ctx) (float sx) (float sy) (float ex) (float ey) (color icol) (color ocol)) "*p = nvgLinearGradient(ctx, sx, sy, ex, ey, *icol, *ocol);") out context sx sy ex ey icolor ocolor)
+    ((foreign-lambda* void ((paint p) (context ctx) (float sx) (float sy) (float ex) (float ey) (color icol) (color ocol)) "*p = nvgLinearGradient(ctx, sx, sy, ex, ey, *icol, *ocol);") (location out) context sx sy ex ey (location icolor) (location ocolor))
     out))
 
-(define (box-gradient context x y width height radius feather icolor ocolor)
+(define (make-box-gradient context x y width height radius feather icolor ocolor)
   (let ((out (make-paint-uninitialized)))
-    ((foreign-lambda* void ((paint p) (context ctx) (float x) (float y) (float w) (float h) (float r) (float f) (color icol) (color ocol)) "*p = nvgBoxGradient(ctx, x, y, w, h, r, f, *icol, *ocol);") out context x y width height radius feather icolor ocolor)
+    ((foreign-lambda* void ((paint p) (context ctx) (float x) (float y) (float w) (float h) (float r) (float f) (color icol) (color ocol)) "*p = nvgBoxGradient(ctx, x, y, w, h, r, f, *icol, *ocol);") (location out) context x y width height radius feather (location icolor) (location ocolor))
     out))
 
-(define (radial-gradient context cx cy inr outr icolor ocolor)
+(define (make-radial-gradient context cx cy inr outr icolor ocolor)
   (let ((out (make-paint-uninitialized)))
-    ((foreign-lambda* void ((paint p) (context ctx) (float cx) (float cy) (float inr) (float outr) (color icol) (color ocol)) "*p = nvgRadialGradient(ctx, cx, cy, inr, outr, *icol, *ocol);") out context cx cy inr outr icolor ocolor)
+    ((foreign-lambda* void ((paint p) (context ctx) (float cx) (float cy) (float inr) (float outr) (color icol) (color ocol)) "*p = nvgRadialGradient(ctx, cx, cy, inr, outr, *icol, *ocol);") (location out) context cx cy inr outr (location icolor) (location ocolor))
     out))
 
-(define (image-pattern context ox oy ex ey angle image alpha)
+(define (make-image-pattern context ox oy ex ey angle image alpha)
   (let ((out (make-paint-uninitialized)))
-    ((foreign-lambda* void ((paint p) (context ctx) (float ox) (float oy) (float ex) (float ey) (float angle) (integer image) (float alpha)) "*p = nvgImagePattern(ctx, ox, oy, ex, ey, angle, image, alpha);") out context ox oy ex ey angle image alpha)
+    ((foreign-lambda* void ((paint p) (context ctx) (float ox) (float oy) (float ex) (float ey) (float angle) (integer image) (float alpha)) "*p = nvgImagePattern(ctx, ox, oy, ex, ey, angle, image, alpha);") (location out) context ox oy ex ey angle image alpha)
     out))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
