@@ -1,6 +1,8 @@
 ;;; nanovg.setup -*- Scheme -*-
 (use make)
 
+(define current-version '0.0.1)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Config
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -30,9 +32,21 @@
   "all")
 
 (install-extension
- 'nanovg
- '("nanovg-gl2.so" "nanovg-gl2.import.so"
-   "nanovg-gl3.so" "nanovg-gl3.import.so"
-   "nanovg-gles2.so" "nanovg-gles2.import.so"
-   "nanovg-gles3.so" "nanovg-gles3.import.so")
- '((version 0.0.1)))
+ 'nanovg-gl2
+ '("nanovg-gl2.so" "nanovg-gl2.import.so")
+ `((version ,current-version)))
+
+(install-extension
+ 'nanovg-gl3
+ '("nanovg-gl3.so" "nanovg-gl3.import.so")
+ `((version ,current-version)))
+
+(install-extension
+ 'nanovg-gles2
+ '("nanovg-gles2.so" "nanovg-gles2.import.so")
+ `((version ,current-version)))
+
+(install-extension
+ 'nanovg-gles3
+ '("nanovg-gles3.so" "nanovg-gles3.import.so")
+ `((version ,current-version)))

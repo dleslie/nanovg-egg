@@ -206,35 +206,27 @@ ENDC
 ;; Frame Control
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define begin-frame!
-  (foreign-lambda void "nvgBeginFrame" context integer integer float))
+(define (begin-frame! context window-width window-height pixel-ratio)
+  ((foreign-lambda void "nvgBeginFrame" context integer integer float) context window-width window-height pixel-ratio))
 
-(define cancel-frame!
-  (foreign-lambda void "nvgCancelFrame" context))
+(define (cancel-frame! context)
+  ((foreign-lambda void "nvgCancelFrame" context) context))
 
-(define end-frame!
-  (foreign-lambda void "nvgEndFrame" context))
+(define (end-frame! context)
+  ((foreign-lambda void "nvgEndFrame" context) context))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; State
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define save-state!
-  (foreign-lambda void "nvgSave" context))
+(define (save-state! context)
+  ((foreign-lambda void "nvgSave" context) context))
 
-(define restore-state!
-  (foreign-lambda void "nvgRestore" context))
+(define (restore-state! context)
+  ((foreign-lambda void "nvgRestore" context) context))
 
-(define reset-state!
-  (foreign-lambda void "nvgReset" context))
-
-(define-syntax with-state!
-  (syntax-rules ()
-    ((with-state ctx . rest)
-     (begin
-       (save-state! ctx)
-       (begin . rest)
-       (restore-state! ctx)))))
+(define (reset-state! context)
+  ((foreign-lambda void "nvgReset" context) context))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Render Styles
@@ -252,20 +244,20 @@ ENDC
 (define (fill-paint! context paint)
   ((foreign-lambda* void ((context ctx) (paint pnt)) "nvgFillPaint(ctx, *pnt);") context (location paint)))
 
-(define miter-limit!
-  (foreign-lambda void "nvgMiterLimit" context float))
+(define (miter-limit! context limit)
+  ((foreign-lambda void "nvgMiterLimit" context float) context limit))
 
-(define stroke-width!
-  (foreign-lambda void "nvgStrokeWidth" context float))
+(define (stroke-width! context width)
+  ((foreign-lambda void "nvgStrokeWidth" context float) context width))
 
-(define line-cap!
-  (foreign-lambda void "nvgLineCap" context integer))
+(define (line-cap! context line-cap-style)
+  ((foreign-lambda void "nvgLineCap" context integer) context line-cap-style))
 
-(define line-join!
-  (foreign-lambda void "nvgLineJoin" context integer))
+(define (line-join! context line-join-style)
+  ((foreign-lambda void "nvgLineJoin" context integer) context line-join-style))
 
-(define global-alpha!
-  (foreign-lambda void "nvgGlobalAlpha" context float))
+(define (global-alpha! context alpha)
+  ((foreign-lambda void "nvgGlobalAlpha" context float) context alpha))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Transforms
@@ -273,26 +265,26 @@ ENDC
 
 (define-foreign-type transform f32vector)
 
-(define reset-transform!
-  (foreign-lambda void "nvgResetTransform" context))
+(define (reset-transform! context)
+  ((foreign-lambda void "nvgResetTransform" context) context))
 
-(define transform!
-  (foreign-lambda* void ((context ctx) (transform t)) "nvgTransform(ctx, t[0], t[1], t[2], t[3], t[4], t[5]);"))
+(define (transform! context transform)
+  ((foreign-lambda* void ((context ctx) (transform t)) "nvgTransform(ctx, t[0], t[1], t[2], t[3], t[4], t[5]);") context transform))
 
-(define translate!
-  (foreign-lambda void "nvgTranslate" context float float))
+(define (translate! context x y)
+  ((foreign-lambda void "nvgTranslate" context float float) context x y))
 
-(define rotate!
-  (foreign-lambda void "nvgRotate" context float))
+(define (rotate! context radians)
+  ((foreign-lambda void "nvgRotate" context float) context radians))
 
-(define skew-x!
-  (foreign-lambda void "nvgSkewX" context float))
+(define (skew-x! context radians)
+  ((foreign-lambda void "nvgSkewX" context float) context radians))
 
-(define skew-y!
-  (foreign-lambda void "nvgSkewY" context float))
+(define (skew-y! context radians)
+  ((foreign-lambda void "nvgSkewY" context float) context radians))
 
-(define scale!
-  (foreign-lambda void "nvgScale" context float float))
+(define (scale! context x y)
+  ((foreign-lambda void "nvgScale" context float float) context x y))
 
 (define (make-transform)
   (make-f32vector 6))
@@ -302,23 +294,23 @@ ENDC
     ((foreign-lambda void "nvgCurrentTransform" context transform) context buf)
     buf))
 
-(define transform-identity!
-  (foreign-lambda void "nvgTransformIdentity" transform))
+(define (transform-identity! transform)
+  ((foreign-lambda void "nvgTransformIdentity" transform) transform))
 
-(define transform-translate!
-  (foreign-lambda void "nvgTransformTranslate" transform float float))
+(define (transform-translate! transform x y)
+  ((foreign-lambda void "nvgTransformTranslate" transform float float) transform x y))
 
-(define transform-scale!
-  (foreign-lambda void "nvgTransformScale" transform float float))
+(define (transform-scale! transform x y)
+  ((foreign-lambda void "nvgTransformScale" transform float float) transform x y))
 
-(define transform-rotate!
-  (foreign-lambda void "nvgTransformRotate" transform float))
+(define (transform-rotate! transform radians)
+  ((foreign-lambda void "nvgTransformRotate" transform float) transform radians))
 
-(define transform-skew-x!
-  (foreign-lambda void "nvgTransformSkewX" transform float))
+(define (transform-skew-x! transform radians)
+  ((foreign-lambda void "nvgTransformSkewX" transform float) transform radians))
 
-(define transform-skew-y!
-  (foreign-lambda void "nvgTransformSkewY" transform float))
+(define (transform-skew-y! transform radians)
+  ((foreign-lambda void "nvgTransformSkewY" transform float) transform radians))
 
 (define (transform-multiply! t1 t2)
   ((foreign-lambda void "nvgTransformMultiply" transform (const transform)) t1 t2)
@@ -334,36 +326,39 @@ ENDC
     ((foreign-lambda void "nvgTransformPoint" (c-pointer float) (c-pointer float) (const transform) float float) (location dx) (location dy) transform x y)
     (values dx dy)))
 
-(define degrees-to-radians
-  (foreign-lambda float "nvgDegToRad" float))
+(define (degrees-to-radians degrees)
+  ((foreign-lambda float "nvgDegToRad" float) degrees))
 
-(define radians-to-degrees
-  (foreign-lambda float "nvgRadToDeg" float))
+(define (radians-to-degrees radians)
+  ((foreign-lambda float "nvgRadToDeg" float) radians))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Images
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define create-image/file!
-  (foreign-lambda integer "nvgCreateImage" context (const c-string) integer))
+(define (create-image/file! context file-name flags)
+  (let ((id ((foreign-lambda integer "nvgCreateImage" context (const c-string) integer) context file-name flags)))
+    (if (= id 0) #f id)))
 
 (define (create-image/blob! context blob flags)
-  ((foreign-lambda integer "nvgCreateImageMem" context integer blob integer) context flags blob (blob-size blob)))
+  (let ((id ((foreign-lambda integer "nvgCreateImageMem" context integer blob integer) context flags blob (blob-size blob))))
+    (if (= id 0) #f id)))
 
-(define create-image/rgba!
-  (foreign-lambda integer "nvgCreateImageRGBA" context integer integer integer (const nonnull-u8vector)))
+(define (create-image/rgba! context width height flags data)
+  (let ((id ((foreign-lambda integer "nvgCreateImageRGBA" context integer integer integer (const nonnull-u8vector)) context width height flags data)))
+    (if (= id 0) #f id)))
 
-(define update-image!
-  (foreign-lambda void "nvgUpdateImage" context integer (const nonnull-u8vector)))
+(define (update-image! context id data)
+  ((foreign-lambda void "nvgUpdateImage" context integer (const nonnull-u8vector)) context id data))
 
-(define (image-size context image)
+(define (image-size context id)
   (let-location ((sx integer)
 		 (sy integer))
-    ((foreign-lambda void "nvgImageSize" context integer (c-pointer integer) (c-pointer integer)) context image (location sx) (location sy))
+    ((foreign-lambda void "nvgImageSize" context integer (c-pointer integer) (c-pointer integer)) context id (location sx) (location sy))
     (values sx sy)))
 
-(define delete-image!
-  (foreign-lambda void "nvgDeleteImage" context integer))
+(define (delete-image! context id)
+  ((foreign-lambda void "nvgDeleteImage" context integer) context id))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Paints
@@ -384,129 +379,124 @@ ENDC
     ((foreign-lambda* void ((paint p) (context ctx) (float cx) (float cy) (float inr) (float outr) (color icol) (color ocol)) "*p = nvgRadialGradient(ctx, cx, cy, inr, outr, *icol, *ocol);") (location out) context cx cy inr outr (location icolor) (location ocolor))
     out))
 
-(define (make-image-pattern context ox oy ex ey angle image alpha)
+(define (make-image-pattern context ox oy ex ey radians image alpha)
   (let ((out (make-paint-uninitialized)))
-    ((foreign-lambda* void ((paint p) (context ctx) (float ox) (float oy) (float ex) (float ey) (float angle) (integer image) (float alpha)) "*p = nvgImagePattern(ctx, ox, oy, ex, ey, angle, image, alpha);") (location out) context ox oy ex ey angle image alpha)
+    ((foreign-lambda* void ((paint p) (context ctx) (float ox) (float oy) (float ex) (float ey) (float radians) (integer image) (float alpha)) "*p = nvgImagePattern(ctx, ox, oy, ex, ey, radians, image, alpha);") (location out) context ox oy ex ey radians image alpha)
     out))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Scissoring
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define scissor!
-  (foreign-lambda void "nvgScissor" context float float float float))
+(define (scissor! context x y width height)
+  ((foreign-lambda void "nvgScissor" context float float float float) context x y width height))
 
-(define intersect-scissor!
-  (foreign-lambda void "nvgIntersectScissor" context float float float float))
+(define (intersect-scissor! context x y width height)
+  ((foreign-lambda void "nvgIntersectScissor" context float float float float) context x y width height))
 
-(define reset-scissor!
-  (foreign-lambda void "nvgResetScissor" context))
+(define (reset-scissor! context)
+  ((foreign-lambda void "nvgResetScissor" context) context))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Paths
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define begin-path!
-  (foreign-lambda void "nvgBeginPath" context))
+(define (begin-path! context)
+  ((foreign-lambda void "nvgBeginPath" context) context))
 
-(define close-path!
-  (foreign-lambda void "nvgClosePath" context))
+(define (close-path! context)
+  ((foreign-lambda void "nvgClosePath" context) context))
 
-(define-syntax with-path!
-  (syntax-rules ()
-    ((with-path ctx . rest)
-     (begin
-       (begin-path! ctx)
-       (begin . rest)
-       (close-path! ctx)))))
+(define (move-to! context x y)
+  ((foreign-lambda void "nvgMoveTo" context float float) context x y))
 
-(define move-to!
-  (foreign-lambda void "nvgMoveTo" context float float))
+(define (line-to! context x y)
+  ((foreign-lambda void "nvgLineTo" context float float) context x y))
 
-(define line-to!
-  (foreign-lambda void "nvgLineTo" context float float))
+(define (bezier-to! context control1-x control1-y control2-x control2-y x y)
+  ((foreign-lambda void "nvgBezierTo" context float float float float float float) context control1-x control1-y control2-x control2-y x y))
 
-(define bezier-to!
-  (foreign-lambda void "nvgBezierTo" context float float float float float float))
+(define (quad-to! context control-x control-y x y)
+  ((foreign-lambda void "nvgQuadTo" context float float float float) context control-x control-y x y))
 
-(define quad-to!
-  (foreign-lambda void "nvgQuadTo" context float float float float))
+(define (arc-to! context x1 y1 x2 y2 radius)
+  ((foreign-lambda void "nvgArcTo" context float float float float float) context x1 y1 x2 y2 radius))
 
-(define arc-to!
-  (foreign-lambda void "nvgArcTo" context float float float float float))
+(define (path-winding! context path-winding-style)
+  ((foreign-lambda void "nvgPathWinding" context integer) context path-winding-style))
 
-(define path-winding!
-  (foreign-lambda void "nvgPathWinding" context integer))
+(define (arc! context center-x center-y radius radian0 radian1 sweep-direction)
+  ((foreign-lambda void "nvgArc" context float float float float float integer) context center-x center-y radius radian0 radian1 sweep-direction))
 
-(define arc!
-  (foreign-lambda void "nvgArc" context float float float float float integer))
+(define (rectangle! context x y width height)
+  ((foreign-lambda void "nvgRect" context float float float float) context x y width height))
 
-(define rectangle!
-  (foreign-lambda void "nvgRect" context float float float float))
+(define (rounded-rectangle! context x y width height radius)
+  ((foreign-lambda void "nvgRoundedRect" context float float float float float) context x y width height radius))
 
-(define rounded-rectangle!
-  (foreign-lambda void "nvgRoundedRect" context float float float float float))
+(define (ellipse! context center-x center-y radius-x radius-y)
+  ((foreign-lambda void "nvgEllipse" context float float float float) context center-x center-y radius-x radius-y))
 
-(define ellipse!
-  (foreign-lambda void "nvgEllipse" context float float float float))
+(define (circle! context center-x center-y radius)
+  ((foreign-lambda void "nvgCircle" context float float float) context center-x center-y radius))
 
-(define circle!
-  (foreign-lambda void "nvgCircle" context float float float))
+(define (fill! context)
+  ((foreign-lambda void "nvgFill" context) context))
 
-(define fill!
-  (foreign-lambda void "nvgFill" context))
-
-(define stroke!
-  (foreign-lambda void "nvgStroke" context))
+(define (stroke! context)
+  ((foreign-lambda void "nvgStroke" context) context))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define create-font!
-  (foreign-lambda integer "nvgCreateFont" context (const c-string) (const c-string)))
+(define (create-font! context name file-name)
+  (let ((id ((foreign-lambda integer "nvgCreateFont" context (const c-string) (const c-string)) context name file-name)))
+    (if (= id 0) #f id)))
 
 (define (create-font/blob! context name data)
-  ((foreign-lambda integer "nvgCreateFontMem" context (const c-string) u8vector integer integer) context name data (blob-size data) 0))
+  (let ((id ((foreign-lambda integer "nvgCreateFontMem" context (const c-string) u8vector integer integer) context name data (blob-size data) 0)))
+    (if (= id 0) #f id)))
 
-(define find-font
-  (foreign-lambda integer "nvgFindFont" context (const c-string)))
+(define (find-font context name)
+  (let ((id ((foreign-lambda integer "nvgFindFont" context (const c-string)) context name)))
+    (if (= id 0) #f id)))
 
-(define font-size!
-  (foreign-lambda void "nvgFontSize" context float))
+(define (font-size! context size)
+  ((foreign-lambda void "nvgFontSize" context float) context size))
 
-(define font-blur!
-  (foreign-lambda void "nvgFontBlur" context float))
+(define (font-blur! context blur)
+  ((foreign-lambda void "nvgFontBlur" context float) context blur))
 
-(define text-letter-spacing!
-  (foreign-lambda void "nvgTextLetterSpacing" context float))
+(define (text-letter-spacing! context spacing)
+  ((foreign-lambda void "nvgTextLetterSpacing" context float) context spacing))
 
-(define text-line-height!
-  (foreign-lambda void "nvgTextLineHeight" context float))
+(define (text-line-height! context height)
+  ((foreign-lambda void "nvgTextLineHeight" context float) context height))
 
-(define text-align!
-  (foreign-lambda void "nvgTextAlign" context integer))
+(define (text-align! context text-align-flags)
+  ((foreign-lambda void "nvgTextAlign" context integer) context text-align-flags))
 
-(define font-face-id!
-  (foreign-lambda void "nvgFontFaceId" context integer))
+(define (font-face-id! context id)
+  ((foreign-lambda void "nvgFontFaceId" context integer) context id))
 
-(define font-face!
-  (foreign-lambda void "nvgFontFace" context (const c-string)))
+(define (font-face! context name)
+  ((foreign-lambda void "nvgFontFace" context (const c-string)) context name))
 
-(define text!
-  (foreign-lambda void "nvgText" context float float (const c-string) (const c-pointer)))
+(define (text! context x y text #!optional (last-char-pointer #f))
+  ((foreign-lambda void "nvgText" context float float (const c-string) (const c-pointer)) context x y text last-char-pointer))
 
-(define text-box!
-  (foreign-lambda void "nvgTextBox" context float float float (const c-string) (const c-pointer)))
+(define (text-box! context x y break-row-width text #!optional (last-char-pointer #f))
+  ((foreign-lambda void "nvgTextBox" context float float float (const c-string) (const c-pointer)) context x y break-row-width text last-char-pointer))
 
-(define (text-bounds context x y string end)
+(define (text-bounds context x y string #!optional (last-char-pointer #f))
   (let* ((buf (make-f32vector 4))
-	 (advance ((foreign-lambda void "nvgTextBounds" context float float (const c-string) (const c-pointer) f32vector) context x y string end buf)))
+	 (advance ((foreign-lambda void "nvgTextBounds" context float float (const c-string) (const c-pointer) f32vector) context x y string last-char-pointer buf)))
     (values advance buf)))
 
-(define (text-box-bounds context x y break-row-width string end)
+(define (text-box-bounds context x y break-row-width string #!optional (last-char-pointer #f))
   (let* ((buf (make-f32vector 4))
-	 (advance ((foreign-lambda void "nvgTextBoxBounds" context float float float (const c-string) (const c-pointer) f32vector) context x y break-row-width string end buf)))
+	 (advance ((foreign-lambda void "nvgTextBoxBounds" context float float float (const c-string) (const c-pointer) f32vector) context x y break-row-width string last-char-pointer buf)))
     (values advance buf)))
 
 (define maximum-glyph-positions (make-parameter 100))
