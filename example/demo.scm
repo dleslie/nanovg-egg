@@ -149,6 +149,32 @@
   (nvg:text-align! vg (bitwise-ior nvg:align/center nvg:align/middle))
   (nvg:text! vg (- (+ x w) (* h 0.55)) (+ y (* h 0.55)) (cp->utf8 icon/circled-cross)))
 
+(define (draw-drop-down vg text x y w h)
+  (define corner-radius 4.0)
+
+  (let ((bg (nvg:make-linear-gradient vg x y x (+ y h) (nvg:make-color-rgba 255 255 255 16) (nvg:make-color-rgba 0 0 0 16))))
+    (nvg:begin-path! vg)
+    (nvg:rounded-rectangle! vg (add1 x) (add1 y) (- w 2) (- h 2) (sub1 corner-radius))
+    (nvg:fill-paint! vg bg)
+    (nvg:fill! vg))
+
+  (nvg:begin-path! vg)
+  (nvg:rounded-rectangle! vg (+ x 0.5) (+ y 0.5) (sub1 w) (sub1 h) (- corner-radius 0.5))
+  (nvg:stroke-color! vg (nvg:make-color-rgba 0 0 0 48))
+  (nvg:stroke! vg)
+
+  (nvg:font-size! vg 20.0)
+  (nvg:font-face! vg "sans")
+  (nvg:fill-color! vg (nvg:make-color-rgba 255 255 255 160))
+  (nvg:text-align! vg (bitwise-ior nvg:align/left nvg:align/middle))
+  (nvg:text! vg (+ x (* h 0.4)) (+ y (* h 0.5)) text)
+
+  (nvg:font-size! vg (* h 1.3))
+  (nvg:font-face! vg "icons")
+  (nvg:fill-color! vg (nvg:make-color-rgba 255 255 255 64))
+  (nvg:text-align! vg (bitwise-ior nvg:align/center nvg:align/middle))
+  (nvg:text! vg (- (+ x w) (* h 0.5)) (+ y (* h 0.5)) (cp->utf8 icon/chevron-right)))
+
 (define nanovg-context (nvg:create-context))
 
 (define demo-data (load-demo-data! nanovg-context exit))
@@ -160,8 +186,11 @@
     (nvg:begin-frame! nanovg-context w h (/ w h)))
 
   (nvg:save-state! nanovg-context)
+
   (draw-window nanovg-context "Widgets 'n Stuff" 50 50 300 400)
   (draw-search-box nanovg-context "Search" 60 95 280 25)
+  (draw-drop-down nanovg-context "Effects" 60 135 280 28)
+  
   (nvg:restore-state! nanovg-context)
 
   (nvg:end-frame! nanovg-context))
