@@ -75,6 +75,59 @@
 	(may-reduce-cp! < #x800 #xc0)
 	(may-reduce-cp! < #x80 #x0)))))))
 
+(define (draw-eyes vg x y w h mx my t)
+  (let* ((ex (* w 0.23))
+	 (ey (* h 0.5))
+	 (lx (+ x ex))
+	 (ly (+ y ey))
+	 (rx (- (+ x w) ex))
+	 (ry (+ y ey))
+	 (br (* 0.5 (if (< ex ey) ex ey)))
+	 (blink (- 1 (* 0.8 (expt (sin (* 0.5 t)) 200)))))
+
+    (let ((bg (nvg:make-linear-gradient vg x (+ y (* h 0.5)) (+ x (* w 0.1)) (+ y h) (nvg:make-color-rgba 0 0 0 32) (nvg:make-color-rgba 0 0 0 16))))
+      (nvg:begin-path! vg)
+      (nvg:ellipse! vg (+ lx 3.0) (+ ly 16.0) ex ey)
+      (nvg:ellipse! vg (+ rx 3.0) (+ ry 16.0) ex ey)
+      (nvg:fill-paint! vg bg)
+      (nvg:fill! vg))
+
+    (let ((bg (nvg:make-linear-gradient vg x (+ y (* h 0.25)) (+ x (* w 0.1)) (+ y h) (nvg:make-color-rgba 220 220 220 255) (nvg:make-color-rgba 128 128 128 255))))
+      (nvg:begin-path! vg)
+      (nvg:ellipse! vg lx ly ex ey)
+      (nvg:ellipse! vg rx ry ex ey)
+      (nvg:fill-paint! vg bg)
+      (nvg:fill! vg))
+
+    (let* ((dx (/ (- mx rx) (* ex 10)))
+	   (dy (/ (- my ry) (* ey 10)))
+	   (d (sqrt (+ (* dx dx) (* dy dy))))
+	   (dx (if (> d 1.0) (/ dx d) dx))
+	   (dy (if (> d 1.0) (/ dy d) dy))
+	   (dx (* dx ex 0.4))
+	   (dy (* dy ey 0.5)))
+      (nvg:begin-path! vg)
+      (nvg:ellipse! vg (+ lx dx) (+ ly dy (* ey 0.25 (- 1 blink))) br (* br blink))
+      (nvg:fill-color! vg (nvg:make-color-rgba 32 32 32 255))
+      (nvg:fill! vg)
+
+      (nvg:begin-path! vg)
+      (nvg:ellipse! vg (+ rx dx) (+ ry dy (* ey 0.25 (- 1 blink))) br (* br blink))
+      (nvg:fill-color! vg (nvg:make-color-rgba 32 32 32 255))
+      (nvg:fill! vg))
+
+    (let ((gloss (nvg:make-radial-gradient vg (- lx (* ex 0.25)) (- ly (* ey 0.5)) (* ex 0.1) (* ex 0.75) (nvg:make-color-rgba 255 255 255 128) (nvg:make-color-rgba 255 255 255 0))))
+      (nvg:begin-path! vg)
+      (nvg:ellipse! vg lx ly ex ey)
+      (nvg:fill-paint! vg gloss)
+      (nvg:fill! vg))
+
+    (let ((gloss (nvg:make-radial-gradient vg (- rx (* ex 0.25)) (- ry (* ey 0.5)) (* ex 0.1) (* ex 0.75) (nvg:make-color-rgba 255 255 255 128) (nvg:make-color-rgba 255 255 255 0))))
+      (nvg:begin-path! vg)
+      (nvg:ellipse! vg rx ry ex ey)
+      (nvg:fill-paint! vg gloss)
+      (nvg:fill! vg))))
+
 (define (draw-window vg title x y w h)
   (define corner-radius 3.0)
 
@@ -182,17 +235,22 @@
 
 (define (nanovg-render data)
   (let ((w (frame-data-display-width data))
-	(h (frame-data-display-height data)))
-    (nvg:begin-frame! nanovg-context w h (/ w h)))
+	(h (frame-data-display-height data))
+	(mx (frame-data-mouse-x data))
+	(my (frame-data-mouse-y data))
+	(t (frame-data-delta data)))
+    (nvg:begin-frame! nanovg-context w h (/ w h))
 
-  (nvg:save-state! nanovg-context)
+    (nvg:save-state! nanovg-context)
 
-  (draw-window nanovg-context "Widgets 'n Stuff" 50 50 300 400)
-  (draw-search-box nanovg-context "Search" 60 95 280 25)
-  (draw-drop-down nanovg-context "Effects" 60 135 280 28)
-  
-  (nvg:restore-state! nanovg-context)
+    (draw-eyes nanovg-context (- w 250) 50 150 100 mx my t)
+    
+    (draw-window nanovg-context "Widgets 'n Stuff" 50 50 300 400)
+    (draw-search-box nanovg-context "Search" 60 95 280 25)
+    (draw-drop-down nanovg-context "Effects" 60 135 280 28)
+    
+    (nvg:restore-state! nanovg-context)
 
-  (nvg:end-frame! nanovg-context))
+    (nvg:end-frame! nanovg-context)))
 
 (render-thunks (cons 'nanovg-render (render-thunks)))
