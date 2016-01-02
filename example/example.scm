@@ -42,6 +42,7 @@
 
 (define-record frame-data
   delta
+  time
   mouse-x
   mouse-y
   display-width
@@ -72,6 +73,7 @@
     (define data
       (make-frame-data
        (- current-time last-render-time)
+       current-time
        (al:mouse-state-x mouse-state)
        (al:mouse-state-y mouse-state)
        (al:display-width main-display)

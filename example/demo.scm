@@ -85,20 +85,31 @@
 	 (br (* 0.5 (if (< ex ey) ex ey)))
 	 (blink (- 1 (* 0.8 (expt (sin (* 0.5 t)) 200)))))
 
+    ;; Shadow
     (let ((bg (nvg:make-linear-gradient vg x (+ y (* h 0.5)) (+ x (* w 0.1)) (+ y h) (nvg:make-color-rgba 0 0 0 32) (nvg:make-color-rgba 0 0 0 16))))
       (nvg:begin-path! vg)
       (nvg:ellipse! vg (+ lx 3.0) (+ ly 16.0) ex ey)
+      (nvg:fill-paint! vg bg)
+      (nvg:fill! vg)
+
+      (nvg:begin-path! vg)
       (nvg:ellipse! vg (+ rx 3.0) (+ ry 16.0) ex ey)
       (nvg:fill-paint! vg bg)
       (nvg:fill! vg))
 
+    ;; Whites
     (let ((bg (nvg:make-linear-gradient vg x (+ y (* h 0.25)) (+ x (* w 0.1)) (+ y h) (nvg:make-color-rgba 220 220 220 255) (nvg:make-color-rgba 128 128 128 255))))
       (nvg:begin-path! vg)
-      (nvg:ellipse! vg lx ly ex ey)
       (nvg:ellipse! vg rx ry ex ey)
+      (nvg:fill-paint! vg bg)
+      (nvg:fill! vg)
+
+      (nvg:begin-path! vg)
+      (nvg:ellipse! vg lx ly ex ey)
       (nvg:fill-paint! vg bg)
       (nvg:fill! vg))
 
+    ;; Retina
     (let* ((dx (/ (- mx rx) (* ex 10)))
 	   (dy (/ (- my ry) (* ey 10)))
 	   (d (sqrt (+ (* dx dx) (* dy dy))))
@@ -116,12 +127,14 @@
       (nvg:fill-color! vg (nvg:make-color-rgba 32 32 32 255))
       (nvg:fill! vg))
 
+    ;; Gloss
     (let ((gloss (nvg:make-radial-gradient vg (- lx (* ex 0.25)) (- ly (* ey 0.5)) (* ex 0.1) (* ex 0.75) (nvg:make-color-rgba 255 255 255 128) (nvg:make-color-rgba 255 255 255 0))))
       (nvg:begin-path! vg)
       (nvg:ellipse! vg lx ly ex ey)
       (nvg:fill-paint! vg gloss)
       (nvg:fill! vg))
 
+    ;; Gloss
     (let ((gloss (nvg:make-radial-gradient vg (- rx (* ex 0.25)) (- ry (* ey 0.5)) (* ex 0.1) (* ex 0.75) (nvg:make-color-rgba 255 255 255 128) (nvg:make-color-rgba 255 255 255 0))))
       (nvg:begin-path! vg)
       (nvg:ellipse! vg rx ry ex ey)
@@ -238,7 +251,7 @@
 	(h (frame-data-display-height data))
 	(mx (frame-data-mouse-x data))
 	(my (frame-data-mouse-y data))
-	(t (frame-data-delta data)))
+	(t (frame-data-time data)))
     (nvg:begin-frame! nanovg-context w h (/ w h))
 
     (nvg:save-state! nanovg-context)
