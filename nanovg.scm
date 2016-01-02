@@ -338,15 +338,15 @@ ENDC
 
 (define (create-image/file! context file-name flags)
   (let ((id ((foreign-lambda integer "nvgCreateImage" context (const c-string) integer) context file-name flags)))
-    (if (= id 0) #f id)))
+    (if (= id -1) #f id)))
 
 (define (create-image/blob! context blob flags)
   (let ((id ((foreign-lambda integer "nvgCreateImageMem" context integer blob integer) context flags blob (blob-size blob))))
-    (if (= id 0) #f id)))
+    (if (= id -1) #f id)))
 
 (define (create-image/rgba! context width height flags data)
   (let ((id ((foreign-lambda integer "nvgCreateImageRGBA" context integer integer integer (const nonnull-u8vector)) context width height flags data)))
-    (if (= id 0) #f id)))
+    (if (= id -1) #f id)))
 
 (define (update-image! context id data)
   ((foreign-lambda void "nvgUpdateImage" context integer (const nonnull-u8vector)) context id data))
@@ -452,15 +452,15 @@ ENDC
 
 (define (create-font! context name file-name)
   (let ((id ((foreign-lambda integer "nvgCreateFont" context (const c-string) (const c-string)) context name file-name)))
-    (if (= id 0) #f id)))
+    (if (= id -1) #f id)))
 
 (define (create-font/blob! context name data)
   (let ((id ((foreign-lambda integer "nvgCreateFontMem" context (const c-string) u8vector integer integer) context name data (blob-size data) 0)))
-    (if (= id 0) #f id)))
+    (if (= id -1) #f id)))
 
 (define (find-font context name)
   (let ((id ((foreign-lambda integer "nvgFindFont" context (const c-string)) context name)))
-    (if (= id 0) #f id)))
+    (if (= id -1) #f id)))
 
 (define (font-size! context size)
   ((foreign-lambda void "nvgFontSize" context float) context size))

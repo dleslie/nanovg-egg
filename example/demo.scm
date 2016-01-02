@@ -1,4 +1,5 @@
-(use (prefix nanovg-gl2 nvg:))
+(use (prefix nanovg-gl2 nvg:)
+     srfi-1)
 
 (define icon/search #x1F50D)
 (define icon/circled-cross #x2716)
@@ -7,8 +8,40 @@
 (define icon/login #xE740)
 (define icon/trash #xE729)
 
-(define (load-demo-data vg data)
-  )
+(define-record demo-data
+  images font-icons font-normal font-bold)
+
+(define (load-demo-data! vg fail)
+  (define (warn-then-fail id file)
+    (when (not id)
+      (display (format "Could not load ~s" file))
+      (newline)
+      (fail)))
+  
+  (define images
+    (map
+     (lambda (idx)
+       (let* ((loc (format "./data/images/image~S.jpg" (add1 idx)))
+	      (image (nvg:create-image/file! vg loc 0)))
+	 (warn-then-fail image loc)
+	 image))
+     (iota 12 0)))
+
+  (define (load-font name loc)
+    (let ((id (nvg:create-font! vg name loc)))
+      (warn-then-fail id loc)
+      id))
+
+  (define font-icons (load-font "icons" "./data/entypo.ttf"))
+  (define font-normal (load-font "sans" "./data/Roboto-Regular.ttf"))
+  (define font-bold (load-font "sans-bold" "./data/Roboto-Bold.ttf"))
+
+  (make-demo-data images font-icons font-normal font-bold))
+
+(define (free-demo-data! vg data)
+  (map
+   (cut nvg:delete-image! vg <>)
+   (demo-data-images data)))
 
 (define (clamp a min max)
   (cond
@@ -45,47 +78,53 @@
 (define (draw-window vg title x y w h)
   (define corner-radius 3.0)
 
-  (nvg:with-state! vg
-   ;; Window
-   (nvg:begin-path! vg)
-   (nvg:rounded-rectangle! vg x y w h corner-radius)
-   (nvg:fill-color! vg (nvg:make-color-rgba 28 30 34 192))
-   (nvg:fill! vg)
+  (nvg:save-state! vg)
 
-   ;; Drop shadow
-   (let ((shadow-paint (nvg:make-box-gradient vg x (+ y 2) w h (* corner-radius 2) 10 (nvg:make-color-rgba 0 0 0 128) (nvg:make-color-rgba 0 0 0 0))))
-     (nvg:begin-path! vg)
-     (nvg:rectangle! vg (- x 10) (- y 10) (+ w 20) (+ h 30))
-     (nvg:rounded-rectangle! vg x y w h corner-radius)
-     (nvg:path-winding! vg nvg:solidity/hole)
-     (nvg:fill-paint! vg shadow-paint)
-     (nvg:fill! vg))
+  ;; Window
+  (nvg:begin-path! vg)
+  (nvg:rounded-rectangle! vg x y w h corner-radius)
+  (nvg:fill-color! vg (nvg:make-color-rgba 28 30 34 192))
+  (nvg:fill! vg)
 
-   ;; Header
-   (let ((header-paint (nvg:make-linear-gradient vg x y x (+ y 15) (nvg:make-color-rgba 255 255 255 8) (nvg:make-color-rgba 0 0 0 16))))
-     (nvg:begin-path! vg)
-     (nvg:rounded-rectangle! vg (+ x 1) (+ y 1) (- w 2) 30 (- corner-radius 1))
-     (nvg:fill-paint! vg header-paint)
-     (nvg:fill! vg)
-     (nvg:begin-path! vg)
-     (nvg:move-to! vg (+ x 0.5) (+ y 30.5))
-     (nvg:line-to! vg (+ x 0.5 2 -1) (+ y 30.5))
-     (nvg:stroke-color! vg (nvg:make-color-rgba 0 0 0 32))
-     (nvg:stroke! vg)
+  ;; Drop shadow
+  (let ((shadow-paint (nvg:make-box-gradient vg x (+ y 2) w h (* corner-radius 2) 10 (nvg:make-color-rgba 0 0 0 128) (nvg:make-color-rgba 0 0 0 0))))
+    (nvg:begin-path! vg)
+    (nvg:rectangle! vg (- x 10) (- y 10) (+ w 20) (+ h 30))
+    (nvg:rounded-rectangle! vg x y w h corner-radius)
+    (nvg:path-winding! vg nvg:solidity/hole)
+    (nvg:fill-paint! vg shadow-paint)
+    (nvg:fill! vg))
 
-     (nvg:font-size! vg 18.0)
-     (nvg:font-face! vg "sans-bold")
-     (nvg:text-align! vg (bitwise-ior nvg:align/center nvg:align/middle))
+  ;; Header
+  (let ((header-paint (nvg:make-linear-gradient vg x y x (+ y 15) (nvg:make-color-rgba 255 255 255 8) (nvg:make-color-rgba 0 0 0 16))))
+    (nvg:begin-path! vg)
+    (nvg:rounded-rectangle! vg (+ x 1) (+ y 1) (- w 2) 30 (- corner-radius 1))
+    (nvg:fill-paint! vg header-paint)
+    (nvg:fill! vg)
+    (nvg:begin-path! vg)
+    (nvg:move-to! vg (+ x 0.5) (+ y 30.5))
+    (nvg:line-to! vg (+ x 0.5 2 -1) (+ y 30.5))
+    (nvg:stroke-color! vg (nvg:make-color-rgba 0 0 0 32))
+    (nvg:stroke! vg)
 
-     (nvg:font-blur! vg 2)
-     (nvg:fill-color! vg (nvg:make-color-rgba 0 0 0 128))
-     (nvg:text! vg (+ x (* w 0.5)) (+ y 16 1) title #f)
+    (nvg:font-size! vg 18.0)
+    (nvg:font-face! vg "sans-bold")
+    (nvg:text-align! vg (bitwise-ior nvg:align/center nvg:align/middle))
 
-     (nvg:font-blur! vg 0)
-     (nvg:fill-color! vg (nvg:make-color-rgba 220 220 220 160))
-     (nvg:text! vg (+ x (* w 0.5)) (+ y 16) title #f))))
+    (nvg:font-blur! vg 2)
+    (nvg:fill-color! vg (nvg:make-color-rgba 0 0 0 128))
+    (nvg:text! vg (+ x (* w 0.5)) (+ y 16 1) title #f)
+
+    (nvg:font-blur! vg 0)
+    (nvg:fill-color! vg (nvg:make-color-rgba 220 220 220 160))
+    (nvg:text! vg (+ x (* w 0.5)) (+ y 16) title #f))
+
+  (nvg:restore-state! vg))
 
 (define nanovg-context (nvg:create-context))
+
+(define demo-data (load-demo-data! nanovg-context exit))
+(set-finalizer! demo-data (cut free-demo-data! nanovg-context <>))
 
 (define (nanovg-render data)
   (let ((w (frame-data-display-width data))
@@ -98,4 +137,4 @@
 
   (nvg:end-frame! nanovg-context))
 
-(render-thunks (cons nanovg-render (render-thunks)))
+(render-thunks (cons 'nanovg-render (render-thunks)))

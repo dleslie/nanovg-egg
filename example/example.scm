@@ -27,7 +27,8 @@
 (gl:init)
 
 (al:new-bitmap-flags-set! (al:bitmap-flag->int 'video-bitmap))
-(define buffer (al:make-bitmap 320 200))
+(define buffer (al:make-bitmap (al:display-width main-display)
+			       (al:display-height main-display)))
 (if (or (not buffer)
 	(not (al:opengl-texture buffer)))
     (abort "Could not create render buffer"))
@@ -52,9 +53,10 @@
   (al:target-bitmap-set! buffer)
   
   (gl:viewport 0 0 (frame-data-display-width data) (frame-data-display-height data))
+  (gl:clear-color 0 0 0 0)
   (gl:clear (bitwise-ior gl:+color-buffer-bit+ gl:+depth-buffer-bit+))
 
-  (map (lambda (t) (t data)) (render-thunks))
+  (map (lambda (t)  (apply (eval t) (list data))) (render-thunks))
     
   (al:target-backbuffer-set! main-display)
 
