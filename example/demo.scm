@@ -1,12 +1,15 @@
 (use (prefix nanovg-gl2 nvg:)
      srfi-1)
 
-(define icon/search #x1F50D)
-(define icon/circled-cross #x2716)
-(define icon/chevron-right #xE75E)
-(define icon/check #x2713)
-(define icon/login #xE740)
-(define icon/trash #xE729)
+(define (integer-list->string lst)
+  (list->string (map integer->char lst)))
+
+(define icon/search (integer-list->string '(-16 -97 -108 -115)))
+(define icon/circled-cross (integer-list->string '(-30 -100 -106)))
+(define icon/chevron-right (integer-list->string '(-18 -99 -98)))
+(define icon/check (integer-list->string '(-30 -100 -109)))
+(define icon/login (integer-list->string '(-18 -99 -128)))
+(define icon/trash (integer-list->string '(-18 -100 -87)))
 
 (define-record demo-data
   images font-icons font-normal font-bold)
@@ -55,25 +58,6 @@
 	(blue (nvg:color-blue color))
 	(alpha (nvg:color-alpha color)))
     (= 0.0 red green blue alpha)))
-
-(define (cp->utf8 cp)
-  (let ((ocp cp))
-    (define (may-reduce-cp! op x y)
-      (when (op ocp x)
-	(let ((val (bitwise-ior #x80 (bitwise-and cp #x3f))))
-	  (set! cp (bitwise-ior (arithmetic-shift cp -6) y))
-	  val)))
-    (list->string
-     (filter
-      char?
-      (reverse 
-       (list
-	(may-reduce-cp! <= #x7fffffff #x4000000)
-	(may-reduce-cp! < #x4000000 #x200000)
-	(may-reduce-cp! < #x200000 #x10000)
-	(may-reduce-cp! < #x10000 #x800)
-	(may-reduce-cp! < #x800 #xc0)
-	(may-reduce-cp! < #x80 #x0)))))))
 
 (define (draw-eyes vg x y w h mx my t)
   (let* ((ex (* w 0.23))
@@ -200,12 +184,11 @@
   (nvg:font-face! vg "icons")
   (nvg:fill-color! vg (nvg:make-color-rgba 255 255 255 64))
   (nvg:text-align! vg (bitwise-ior nvg:align/center nvg:align/middle))
-  (nvg:text! vg (+ x (* h 0.55)) (+ y (* h 0.55)) (cp->utf8 icon/search))
+  (nvg:text! vg (+ x (* h 0.55)) (+ y (* h 0.55)) icon/search)
 
   (nvg:font-size! vg 20.0)
   (nvg:font-face! vg "sans")
   (nvg:fill-color! vg (nvg:make-color-rgba 255 255 255 32))
-
   (nvg:text-align! vg (bitwise-ior nvg:align/left nvg:align/middle))
   (nvg:text! vg (+ x (* h 1.05)) (+ y (* h 0.5)) text)
 
@@ -213,7 +196,7 @@
   (nvg:font-face! vg "icons")
   (nvg:fill-color! vg (nvg:make-color-rgba 255 255 255 32))
   (nvg:text-align! vg (bitwise-ior nvg:align/center nvg:align/middle))
-  (nvg:text! vg (- (+ x w) (* h 0.55)) (+ y (* h 0.55)) (cp->utf8 icon/circled-cross)))
+  (nvg:text! vg (- (+ x w) (* h 0.55)) (+ y (* h 0.55)) icon/circled-cross))
 
 (define (draw-drop-down vg text x y w h)
   (define corner-radius 4.0)
@@ -239,7 +222,7 @@
   (nvg:font-face! vg "icons")
   (nvg:fill-color! vg (nvg:make-color-rgba 255 255 255 64))
   (nvg:text-align! vg (bitwise-ior nvg:align/center nvg:align/middle))
-  (nvg:text! vg (- (+ x w) (* h 0.5)) (+ y (* h 0.5)) (cp->utf8 icon/chevron-right)))
+  (nvg:text! vg (- (+ x w) (* h 0.5)) (+ y (* h 0.5)) icon/chevron-right))
 
 (define nanovg-context (nvg:create-context))
 
