@@ -1,6 +1,6 @@
 ;; -*- geiser-scheme-implementation: 'chicken -*-
 
-(import foreign srfi-4)
+(import foreign srfi-4 srfi-1)
 
 (foreign-declare #<<ENDC
 #include <GL/gl.h>
@@ -193,14 +193,14 @@ ENDC
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-record glyph-position
-  offset x minx maxx)
+  index x minx maxx)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Text Row
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-record text-row
-  start-offset end-offset next-offset width minx maxx)
+  start end next width minx maxx)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Frame Control
@@ -491,89 +491,80 @@ ENDC
 
 (define (text-bounds context x y string #!optional (last-char-pointer #f))
   (let* ((buf (make-f32vector 4))
-	 (advance ((foreign-lambda void "nvgTextBounds" context float float (const c-string) (const c-pointer) f32vector) context x y string last-char-pointer buf)))
+	 (advance
+	  ((foreign-lambda void "nvgTextBounds" context float float (const c-string) (const c-pointer) f32vector)
+	   context x y string last-char-pointer buf)))
     (values advance buf)))
 
 (define (text-box-bounds context x y break-row-width string #!optional (last-char-pointer #f))
   (let* ((buf (make-f32vector 4))
-	 (advance ((foreign-lambda void "nvgTextBoxBounds" context float float float (const c-string) (const c-pointer) f32vector) context x y break-row-width string last-char-pointer buf)))
+	 (advance
+	  ((foreign-lambda void "nvgTextBoxBounds" context float float float (const c-string) (const c-pointer) f32vector)
+	   context x y break-row-width string last-char-pointer buf)))
     (values advance buf)))
 
 (define maximum-glyph-positions (make-parameter 100))
+(define-foreign-type glyph-position (c-pointer (struct "NVGglyphPosition")))
 
 (define (text-glyph-positions context x y string)
-  (define-foreign-type glyph-position (c-pointer (struct "NVGglyphPosition")))
-
-  (define get-index
-    (foreign-lambda* size_t ((glyph-position gp) (integer offset) ((const c-string) original)) "C_return(gp[offset].str - original);"))
-
-  (define get-x
-    (foreign-lambda* float ((glyph-position gp) (integer offset)) "C_return(gp[offset].x);"))
-
-  (define get-minx
-    (foreign-lambda* float ((glyph-position gp) (integer offset)) "C_return(gp[offset].minx);"))
-
-  (define get-maxx
-    (foreign-lambda* float ((glyph-position gp) (integer offset)) "C_return(gp[offset].maxx);"))
-
-  (let* ((buf (make-blob (* (foreign-type-size "NVGglyphPosition") (maximum-glyph-positions))))
-	 (count ((foreign-lambda integer "nvgTextGlyphPositions" context float float (const c-string) (const c-string) glyph-position integer) context x y string #f buf (maximum-glyph-positions))))
-    (do ((idx count (sub1 idx))
-	 (positions '()))
-	((<= idx 0) positions)
-      (set! positions
-	(cons
-	 (let ((idx (sub1 idx)))
-	   (make-glyph-position
-	    (get-index buf idx string)
-	    (get-x buf idx)
-	    (get-minx buf idx)
-	    (get-maxx buf idx)))
-	 positions)))))
-
-(define maximum-text-rows (make-parameter 100))
+  (let* ((buf
+	  (make-blob (* (foreign-type-size "NVGglyphPosition") (maximum-glyph-positions))))
+	 (count
+	  ((foreign-lambda integer "nvgTextGlyphPositions" context float float (const c-string) (const c-string) glyph-position integer)
+	   context x y string #f buf (maximum-glyph-positions)))
+	 (gp-index
+	  (foreign-lambda* size_t ((glyph-position gp) (integer offset) ((const c-string) original)) "C_return(gp[offset].str - original);"))
+	 (gp-x
+	  (foreign-lambda* float ((glyph-position gp) (integer offset)) "C_return(gp[offset].x);"))
+	 (gp-minx
+	  (foreign-lambda* float ((glyph-position gp) (integer offset)) "C_return(gp[offset].minx);"))
+	 (gp-maxx
+	  (foreign-lambda* float ((glyph-position gp) (integer offset)) "C_return(gp[offset].maxx);")))
+    (map
+     (lambda (idx)	     
+       (make-glyph-position
+	(gp-index buf idx string)
+	(gp-x buf idx)
+	(gp-minx buf idx)
+	(gp-maxx buf idx)))
+     (iota count))))
 
 (define (text-metrics context)
   (let-location ((ascender float)
 		 (descender float)
 		 (lineh float))
-    ((foreign-lambda void "nvgTextMetrics" context (c-pointer float) (c-pointer float) (c-pointer float)) context (location ascender) (location descender) (location lineh))
+    ((foreign-lambda void "nvgTextMetrics" context (c-pointer float) (c-pointer float) (c-pointer float))
+     context (location ascender) (location descender) (location lineh))
     (values ascender descender lineh)))
 
+(define maximum-text-rows (make-parameter 100))
+(define-foreign-type text-row (c-pointer (struct "NVGtextRow")))
+
 (define (text-break-lines context string row-width)
-  (define-foreign-type text-row (c-pointer (struct "NVGtextRow")))
-
-  (define get-start-index
-    (foreign-lambda* size_t ((text-row tr) (integer offset) ((const c-string) original)) "C_return(tr[offset].start - original);"))
-
-  (define get-end-index
-    (foreign-lambda* size_t ((text-row tr) (integer offset) ((const c-string) original)) "C_return(tr[offset].end - original);"))
-
-  (define get-next-index
-    (foreign-lambda* size_t ((text-row tr) (integer offset) ((const c-string) original)) "C_return(tr[offset].next - original);"))
-
-  (define get-width
-    (foreign-lambda* float ((text-row tr) (integer offset)) "C_return(tr[offset].width);"))
-
-  (define get-minx
-    (foreign-lambda* float ((text-row tr) (integer offset)) "C_return(tr[offset].minx);"))
-
-  (define get-maxx
-    (foreign-lambda* float ((text-row tr) (integer offset)) "C_return(tr[offset].maxx);"))
-
-  (let* ((buf (make-blob (* (foreign-type-size "NVGtextRow") (maximum-text-rows))))
-	 (count ((foreign-lambda integer "nvgTextBreakLines" context (const c-string) (const c-string) float text-row integer) context string #f row-width buf (maximum-text-rows))))
-    (do ((idx count (sub1 idx))
-	 (rows '()))
-	((<= idx 0) rows)
-      (set! rows
-	(cons
-	 (let ((idx (sub1 idx)))
-	   (make-text-row
-	    (get-start-index buf idx string)
-	    (get-end-index buf idx string)
-	    (get-next-index buf idx string)
-	    (get-width buf idx)
-	    (get-minx buf idx)
-	    (get-maxx buf idx)))
-	 rows)))))
+  (let* ((buf
+	  (make-blob (* (foreign-type-size "NVGtextRow") (maximum-text-rows))))
+	 (count
+	  ((foreign-lambda integer "nvgTextBreakLines" context (const c-string) (const c-string) float text-row integer)
+	   context string #f row-width buf (maximum-text-rows)))
+	 (tr-start-index
+	  (foreign-lambda* size_t ((text-row tr) (integer offset) ((const c-string) original)) "C_return(tr[offset].start - original);"))
+	 (tr-end-index
+	  (foreign-lambda* size_t ((text-row tr) (integer offset) ((const c-string) original)) "C_return(tr[offset].end - original);"))
+	 (tr-next-index
+	  (foreign-lambda* size_t ((text-row tr) (integer offset) ((const c-string) original)) "C_return(tr[offset].next - original);"))
+	 (tr-width
+	  (foreign-lambda* float ((text-row tr) (integer offset)) "C_return(tr[offset].width);"))
+	 (tr-minx
+	  (foreign-lambda* float ((text-row tr) (integer offset)) "C_return(tr[offset].minx);"))
+	 (tr-maxx
+	  (foreign-lambda* float ((text-row tr) (integer offset)) "C_return(tr[offset].maxx);")))
+    (map
+     (lambda (idx)
+       (make-text-row
+	(tr-start-index buf idx string)
+	(tr-end-index buf idx string)
+	(tr-next-index buf idx string)
+	(tr-width buf idx)
+	(tr-minx buf idx)
+	(tr-maxx buf idx)))
+     (iota count))))
