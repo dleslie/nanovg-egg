@@ -510,7 +510,6 @@ ENDC
 (define (text-glyph-positions context x y string)
   (let* ((buf (make-blob (* (foreign-type-size "NVGglyphPosition") (maximum-glyph-positions))))
 	 (buf-loc (location buf))
-	 (str-loc (location string))
 	 (count
 	  ((foreign-lambda* integer ((context ctx) (float x) (float y) ((const c-string) str) (c-pointer buf) (integer max)) "
 // str is a temporary string copied by Chicken; using locatives results in weird strings with extra bytes

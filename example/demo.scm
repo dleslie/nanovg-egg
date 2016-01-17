@@ -160,7 +160,7 @@
 	      (let* ((glyph (car glyphs))
 		     (x0 (nvg:glyph-position-x glyph))
 		     (x1 (if (null? (cdr glyphs)) (+ x row-width) (nvg:glyph-position-x (cadr glyphs))))
-		     (gx (* x0 0.3 x1 0.7)))
+		     (gx (+ (* x0 0.3) (* x1 0.7))))
 		(when (and (>= mx px) (< mx gx))
 		  (set! caretx x0))
 		(set! px gx)))
