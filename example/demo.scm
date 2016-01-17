@@ -125,6 +125,102 @@
       (nvg:fill-paint! vg gloss)
       (nvg:fill! vg))))
 
+(define (draw-paragraph vg x y width height mx my)
+  (nvg:save-state! vg)
+  (let-values
+      (((text) "This is longer chunk of text.\n  \n  Would have used lorem ipsum but she    was busy jumping over the lazy dog with the fox and all the men who came to the aid of the party.")
+       ((gutter gx gy) (values #f 0 0))
+       ((ascender descender lineh) (nvg:text-metrics vg)))
+
+    (nvg:font-size! vg 18.0)
+    (nvg:font-face! vg "sans")
+    (nvg:text-align! vg (bitwise-ior nvg:align/left nvg:align/top))
+
+    (do
+	((lnum 0 (add1 lnum))
+	 (break-lines (nvg:text-break-lines vg text width) (cdr break-lines)))
+	((null? break-lines))
+      (let* ((hit (and (> mx x) (< mx (+ x width)) (>= my y) (< my (+ y lineh))))
+	     (row (car break-lines))
+	     (row-width (nvg:text-row-width row))
+	     (row-text (substring text (nvg:text-row-start row) (nvg:text-row-end row))))
+	(nvg:begin-path! vg)
+	(nvg:fill-color! vg (nvg:make-color-rgba 255 255 255 (if hit 64 16)))
+	(nvg:rectangle! vg x y row-width lineh)
+	(nvg:fill! vg)
+
+	(nvg:fill-color! vg (nvg:make-color-rgba 255 255 255 255))
+	(nvg:text! vg x y row-text)
+	
+	(when hit
+	  (let ((caretx (if (< mx (+ x (* 0.5 row-width))) x (+ x row-width)))
+		(px x))
+	    (do ((glyphs (nvg:text-glyph-positions vg x y row-text) (cdr glyphs)))
+		((null? glyphs))
+	      (let* ((glyph (car glyphs))
+		     (x0 (nvg:glyph-position-x glyph))
+		     (x1 (if (null? (cdr glyphs)) (+ x row-width) (nvg:glyph-position-x (cadr glyphs))))
+		     (gx (* x0 0.3 x1 0.7)))
+		(when (and (>= mx px) (< mx gx))
+		  (set! caretx x0))
+		(set! px gx)))
+	    (nvg:begin-path! vg)
+	    (nvg:fill-color! vg (nvg:make-color-rgba 255 192 0 255))
+	    (nvg:rectangle! vg caretx y 1 lineh)
+	    (nvg:fill! vg)
+
+	    (set! gutter (+ 1 lnum))
+	    (set! gx (- x 10))
+	    (set! gy (+ y (* 0.5 lineh)))))
+	(set! y (+ y lineh))))
+    (when gutter
+      (let ((txt (->string gutter)))
+	(nvg:font-size! vg 13.0)
+	(nvg:text-align! vg (bitwise-ior nvg:align/right nvg:align/middle))
+
+	(let-values (((advance bounds) (nvg:text-bounds! vg gx gy txt)))
+	  (nvg:begin-path! vg)
+	  (nvg:fill-color! vg (nvg:make-color-rgba 255 192 0 255))
+	  (nvg:rounded-rectangle! vg
+				  (fptruncate (- (f32vector-ref bounds 0) 4))
+				  (fptruncate (- (f32vector-ref bounds 1) 2))
+				  (fptruncate (+ (- (f32vector-ref bounds 2) (f32vector-ref bounds 0)) 8))
+				  (fptruncate (+ (- (f32vector-ref bounds 3) (f32vector-ref bounds 1)) 4))
+				  (fptruncate (- (* 0.5 (+ (- (f32vector-ref bounds 3) (f32vector-ref bounds 1)) 4)) 1)))
+	  (nvg:text! vg gx gy txt))))
+    
+    (nvg:font-size! vg 13.0)
+    (nvg:text-align! vg (bitwise-ior nvg:align/right nvg:align/top))
+    (let ((y (+ 20 y))
+	  (text "Hover your mouse over the text to see calculated caret position."))
+      (let-values
+	  (((advance bounds) (nvg:text-bounds! vg x y text)))
+	(let* ((gx (fpabs (/ (- mx (* 0.5 (+ (f32vector-ref bounds 0) (f32vector-ref bounds 2))))
+			     (- (f32vector-ref bounds 0) (f32vector-ref bounds 2)))))
+	       (gy (fpabs (/ (- my (* 0.5 (+ (f32vector-ref bounds 1) (f32vector-ref bounds 3))))
+			     (- (f32vector-ref bounds 1) (f32vector-ref bounds 3)))))
+	       (a (clamp (fpmax gx gy) 0 1))
+	       (px (fptruncate (* 0.5 (+ (f32vector-ref bounds 2) (f32vector-ref bounds 0))))))
+	  (nvg:global-alpha! vg a)
+	  
+	  (nvg:begin-path! vg)
+	  (nvg:fill-color! vg (nvg:make-color-rgba 220 220 220 255))
+	  (nvg:rounded-rectangle! vg
+				  (- (f32vector-ref bounds 0) 2)
+				  (- (f32vector-ref bounds 1) 2)
+				  (fptruncate (+ (- (f32vector-ref bounds 2) (f32vector-ref bounds 0)) 4))
+				  (fptruncate (+ (- (f32vector-ref bounds 3) (f32vector-ref bounds 1)) 4))
+				  3)
+
+	  (nvg:move-to! vg px (- (f32vector-ref bounds 1) 10))
+	  (nvg:line-to! vg (+ px 7) (add1 (f32vector-ref bounds 1)))
+	  (nvg:line-to! vg (- px 7) (add1 (f32vector-ref bounds 1)))
+	  (nvg:fill! vg)
+
+	  (nvg:fill-color! vg (nvg:make-color-rgba 0 0 0 220))
+	  (nvg:text-box! vg x y 150 text)))))
+  (nvg:restore-state! vg))
+
 (define (draw-window vg title x y w h)
   (define corner-radius 3.0)
 
@@ -237,15 +333,12 @@
 	(t (frame-data-time data)))
     (nvg:begin-frame! nanovg-context w h (/ w h))
 
-    (nvg:save-state! nanovg-context)
-
     (draw-eyes nanovg-context (- w 250) 50 150 100 mx my t)
+    (draw-paragraph nanovg-context (- w 450) 50 150 100 mx my)
     
     (draw-window nanovg-context "Widgets 'n Stuff" 50 50 300 400)
     (draw-search-box nanovg-context "Search" 60 95 280 25)
     (draw-drop-down nanovg-context "Effects" 60 135 280 28)
-    
-    (nvg:restore-state! nanovg-context)
 
     (nvg:end-frame! nanovg-context)))
 

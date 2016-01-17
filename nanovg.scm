@@ -1,6 +1,7 @@
 ;; -*- geiser-scheme-implementation: 'chicken -*-
 
 (import foreign srfi-4 srfi-1)
+(require-extension srfi-4 srfi-1)
 
 (foreign-declare #<<ENDC
 #include <GL/gl.h>
@@ -489,7 +490,7 @@ ENDC
 (define (text-box! context x y break-row-width text #!optional (last-char-pointer #f))
   ((foreign-lambda void "nvgTextBox" context float float float (const c-string) (const c-pointer)) context x y break-row-width text last-char-pointer))
 
-(define (text-bounds context x y string #!optional (last-char-pointer #f))
+(define (text-bounds! context x y string #!optional (last-char-pointer #f))
   (let* ((buf (make-f32vector 4))
 	 (advance
 	  ((foreign-lambda void "nvgTextBounds" context float float (const c-string) (const c-pointer) f32vector)
@@ -507,13 +508,24 @@ ENDC
 (define-foreign-type glyph-position (c-pointer (struct "NVGglyphPosition")))
 
 (define (text-glyph-positions context x y string)
-  (let* ((buf
-	  (make-blob (* (foreign-type-size "NVGglyphPosition") (maximum-glyph-positions))))
+  (let* ((buf (make-blob (* (foreign-type-size "NVGglyphPosition") (maximum-glyph-positions))))
+	 (buf-loc (location buf))
+	 (str-loc (location string))
 	 (count
-	  ((foreign-lambda integer "nvgTextGlyphPositions" context float float (const c-string) (const c-string) glyph-position integer)
-	   context x y string #f buf (maximum-glyph-positions)))
+	  ((foreign-lambda* integer ((context ctx) (float x) (float y) ((const c-string) str) (c-pointer buf) (integer max)) "
+// str is a temporary string copied by Chicken; using locatives results in weird strings with extra bytes
+int count = nvgTextGlyphPositions(ctx, x, y, str, NULL, buf, max);
+NVGglyphPosition *positions = (NVGglyphPosition *)buf;
+
+// Make relative locations
+int i;
+for (i = 0; i < count; ++i) {
+  positions[i].str = (char *)(positions[i].str - str);
+}
+C_return(count);")
+	   context x y string buf-loc (maximum-glyph-positions)))
 	 (gp-index
-	  (foreign-lambda* size_t ((glyph-position gp) (integer offset) ((const c-string) original)) "C_return(gp[offset].str - original);"))
+	  (foreign-lambda* size_t ((glyph-position gp) (integer offset)) "C_return((size_t)gp[offset].str);"))
 	 (gp-x
 	  (foreign-lambda* float ((glyph-position gp) (integer offset)) "C_return(gp[offset].x);"))
 	 (gp-minx
@@ -523,10 +535,10 @@ ENDC
     (map
      (lambda (idx)	     
        (make-glyph-position
-	(gp-index buf idx string)
-	(gp-x buf idx)
-	(gp-minx buf idx)
-	(gp-maxx buf idx)))
+	(gp-index buf-loc idx)
+	(gp-x buf-loc idx)
+	(gp-minx buf-loc idx)
+	(gp-maxx buf-loc idx)))
      (iota count))))
 
 (define (text-metrics context)
@@ -541,17 +553,29 @@ ENDC
 (define-foreign-type text-row (c-pointer (struct "NVGtextRow")))
 
 (define (text-break-lines context string row-width)
-  (let* ((buf
-	  (make-blob (* (foreign-type-size "NVGtextRow") (maximum-text-rows))))
+  (let* ((buf (make-blob (* (foreign-type-size "NVGtextRow") (maximum-text-rows))))
+	 (buf-loc (location buf))
 	 (count
-	  ((foreign-lambda integer "nvgTextBreakLines" context (const c-string) (const c-string) float text-row integer)
-	   context string #f row-width buf (maximum-text-rows)))
+	  ((foreign-lambda* integer ((context ctx) ((const c-string) str) (float width) (c-pointer buf) (integer max)) "
+// str is a temporary string copied by Chicken; using locatives results in weird strings with extra bytes
+int count = nvgTextBreakLines(ctx, str, NULL, width, buf, max);
+NVGtextRow *rows = (NVGtextRow *)buf;
+
+// Make relative locations
+int i;
+for (i = 0; i < count; ++i) {
+  rows[i].start = (char *)(rows[i].start - str);
+  rows[i].end = (char *)(rows[i].end - str);
+  rows[i].next = (char *)(rows[i].next - str);
+}
+C_return(count);")
+	   context string row-width buf-loc (maximum-text-rows)))
 	 (tr-start-index
-	  (foreign-lambda* size_t ((text-row tr) (integer offset) ((const c-string) original)) "C_return(tr[offset].start - original);"))
+	  (foreign-lambda* size_t ((text-row tr) (integer offset)) "C_return((size_t)tr[offset].start);"))
 	 (tr-end-index
-	  (foreign-lambda* size_t ((text-row tr) (integer offset) ((const c-string) original)) "C_return(tr[offset].end - original);"))
+	  (foreign-lambda* size_t ((text-row tr) (integer offset)) "C_return((size_t)tr[offset].end);"))
 	 (tr-next-index
-	  (foreign-lambda* size_t ((text-row tr) (integer offset) ((const c-string) original)) "C_return(tr[offset].next - original);"))
+	  (foreign-lambda* size_t ((text-row tr) (integer offset)) "C_return((size_t)tr[offset].next);"))
 	 (tr-width
 	  (foreign-lambda* float ((text-row tr) (integer offset)) "C_return(tr[offset].width);"))
 	 (tr-minx
@@ -561,10 +585,10 @@ ENDC
     (map
      (lambda (idx)
        (make-text-row
-	(tr-start-index buf idx string)
-	(tr-end-index buf idx string)
-	(tr-next-index buf idx string)
-	(tr-width buf idx)
-	(tr-minx buf idx)
-	(tr-maxx buf idx)))
+	(tr-start-index buf-loc idx)
+	(tr-end-index buf-loc idx)
+	(tr-next-index buf-loc idx)
+	(tr-width buf-loc idx)
+	(tr-minx buf-loc idx)
+	(tr-maxx buf-loc idx)))
      (iota count))))
