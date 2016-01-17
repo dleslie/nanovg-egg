@@ -1,16 +1,57 @@
 (use (only allegro
-	   init new-display-flags-set! display-flag->int make-display new-bitmap-flags-set! bitmap-flag->int make-bitmap opengl-texture make-keyboard-state target-bitmap-set! target-backbuffer-set! bitmap-draw flip-display keyboard-state-init! keyboard-state-key-down? current-time make-mouse-state mouse-state-init! mouse-state-x mouse-state-y)
+	   init new-display-flags-set! display-flag->int make-display make-keyboard-state target-backbuffer-set! flip-display keyboard-state-init! keyboard-state-key-down? current-time make-mouse-state mouse-state-init! mouse-state-x mouse-state-y rest)
      (prefix allegro al:)
 
      (only opengl-glew
-	   init clear +color-buffer-bit+ +depth-buffer-bit+ viewport)
-     (prefix opengl-glew gl:)
-     srfi-18)
+	   init clear +color-buffer-bit+ +depth-buffer-bit+ +stencil-buffer-bit+ viewport)
+     (prefix opengl-glew gl:))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Utils
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (display-exception exn)
+  (define (display-call-entry call)
+    (let ((type (vector-ref call 0))
+	  (line (vector-ref call 1)))
+      (cond
+       ((equal? type "<syntax>")
+	(display (string-append type " ")) (write line) (newline))
+       ((equal? type "<eval>")
+	(display (string-append type "   ")) (write line) (newline)))))
+
+  (with-exception-handler (lambda a a)
+    (lambda ()
+      (display (format "Error: (~s) ~s: ~s"
+		       ((condition-property-accessor 'exn 'location) exn)
+		       ((condition-property-accessor 'exn 'message) exn)
+		       ((condition-property-accessor 'exn 'arguments) exn)))
+      (newline)
+      (display "Call history: ") (newline)
+      (map display-call-entry ((condition-property-accessor 'exn 'call-chain) exn))
+      (newline))))
+
+(define (safe-apply symbol args #!key (overwrite-function '(lambda a a)) (print-exception #t))
+  (call/cc
+   (lambda (return)
+     (with-exception-handler
+	 (lambda (x)
+	   (when print-exception
+	     (display-exception x))
+	   (when overwrite-function
+	     (eval `(set! ,symbol ,overwrite-function)))
+	   (return x))
+       (lambda ()
+	 (apply (eval symbol) args))))))
 
 (define (abort x)
   (display x)
   (newline)
   (exit))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Init Window and Input
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (if (not (al:init))
     (abort "Could not init Allegro"))
@@ -26,19 +67,14 @@
 
 (gl:init)
 
-(al:new-bitmap-flags-set! (al:bitmap-flag->int 'video-bitmap))
-(define buffer (al:make-bitmap (al:display-width main-display)
-			       (al:display-height main-display)))
-(if (or (not buffer)
-	(not (al:opengl-texture buffer)))
-    (abort "Could not create render buffer"))
-
 (define kb-state (al:make-keyboard-state))
 (define mouse-state (al:make-mouse-state))
 
-(define render-thunks (make-parameter '()))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Render Step
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define last-render-time (al:current-time))
+(define render-thunks (make-parameter '()))
 
 (define-record frame-data
   delta
@@ -48,49 +84,52 @@
   display-width
   display-height)
 
-(include "demo")
-
 (define (render data)
-  (al:target-bitmap-set! buffer)
+  (al:target-backbuffer-set! main-display)
   
   (gl:viewport 0 0 (frame-data-display-width data) (frame-data-display-height data))
   (gl:clear-color 0 0 0 0)
-  (gl:clear (bitwise-ior gl:+color-buffer-bit+ gl:+depth-buffer-bit+))
+  (gl:clear (bitwise-ior gl:+color-buffer-bit+ gl:+depth-buffer-bit+ gl:+stencil-buffer-bit+))
 
-  (map (lambda (t)  (apply (eval t) (list data))) (render-thunks))
-    
-  (al:target-backbuffer-set! main-display)
+  (map
+   (lambda (t) (safe-apply t (list data)))
+   (render-thunks))
 
-  (al:bitmap-draw buffer 0 0 0)
   (al:flip-display))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Main Loop
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (define (main-loop)
-  (al:keyboard-state-init! kb-state)
-  (al:mouse-state-init! mouse-state)
-  (let* ((current-time (al:current-time)))
-    (set! last-render-time (al:current-time))
+  (let loop ((last-render-time (al:current-time)))
+    (al:keyboard-state-init! kb-state)
+    (al:mouse-state-init! mouse-state)
+    (let* ((current-time (al:current-time))
+	   (data
+	    (make-frame-data
+	     (- current-time last-render-time)
+	     current-time
+	     (al:mouse-state-x mouse-state)
+	     (al:mouse-state-y mouse-state)
+	     (al:display-width main-display)
+	     (al:display-height main-display)))
+	   (last-render-time (al:current-time)))
+      (when (not (al:keyboard-state-key-down? kb-state 'escape))
+	(render data)
+	(al:rest (min 0 (- (/ 1 60) (- (al:current-time) last-render-time))))
+	(loop last-render-time)))))
 
-    (define data
-      (make-frame-data
-       (- current-time last-render-time)
-       current-time
-       (al:mouse-state-x mouse-state)
-       (al:mouse-state-y mouse-state)
-       (al:display-width main-display)
-       (al:display-height main-display)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Load Demo
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    (when (not (al:keyboard-state-key-down? kb-state 'escape))
-      (render data)
-      (thread-sleep! (seconds->time (- (/ 1 30) (- (al:current-time) last-render-time))))
-      (main-loop))))
+(include "demo.scm")
 
-(define main-thread (make-thread main-loop "Main Thread"))
-(thread-start! main-thread)
-
-;; This trick allows interactive calling of the example
+;; Start
 (cond-expand
-  (csi (begin
-	 (use parley)
-	 (let ((old (current-input-port)))
-	   (current-input-port (make-parley-port old)))))
-  (else (thread-join! main-thread)))
+  (csi
+   (display "Run (main-loop) to start evaluation. Press escape to kill it.") (newline))
+  (else
+   (main-loop)))
+
