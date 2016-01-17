@@ -173,12 +173,13 @@
 	    (set! gx (- x 10))
 	    (set! gy (+ y (* 0.5 lineh)))))
 	(set! y (+ y lineh))))
+
     (when gutter
       (let ((txt (->string gutter)))
 	(nvg:font-size! vg 13.0)
 	(nvg:text-align! vg (bitwise-ior nvg:align/right nvg:align/middle))
 
-	(let-values (((advance bounds) (nvg:text-bounds! vg gx gy txt)))
+	(let-values (((advance bounds) (nvg:text-bounds vg gx gy txt)))
 	  (nvg:begin-path! vg)
 	  (nvg:fill-color! vg (nvg:make-color-rgba 255 192 0 255))
 	  (nvg:rounded-rectangle! vg
@@ -191,15 +192,17 @@
     
     (nvg:font-size! vg 13.0)
     (nvg:text-align! vg (bitwise-ior nvg:align/right nvg:align/top))
+    (nvg:text-line-height! vg 1.2)
+    
     (let ((y (+ 20 y))
 	  (text "Hover your mouse over the text to see calculated caret position."))
       (let-values
-	  (((advance bounds) (nvg:text-bounds! vg x y text)))
+	  (((advance bounds) (nvg:text-box-bounds vg x y 150 text)))
 	(let* ((gx (fpabs (/ (- mx (* 0.5 (+ (f32vector-ref bounds 0) (f32vector-ref bounds 2))))
 			     (- (f32vector-ref bounds 0) (f32vector-ref bounds 2)))))
 	       (gy (fpabs (/ (- my (* 0.5 (+ (f32vector-ref bounds 1) (f32vector-ref bounds 3))))
 			     (- (f32vector-ref bounds 1) (f32vector-ref bounds 3)))))
-	       (a (clamp (fpmax gx gy) 0 1))
+	       (a (clamp (- (fpmax gx gy) 0.5) 0 1))
 	       (px (fptruncate (* 0.5 (+ (f32vector-ref bounds 2) (f32vector-ref bounds 0))))))
 	  (nvg:global-alpha! vg a)
 	  
@@ -325,21 +328,49 @@
 (define demo-data (load-demo-data! nanovg-context exit))
 (set-finalizer! demo-data (cut free-demo-data! nanovg-context <>))
 
-(define (nanovg-render data)
+;;;;;;;;;;;;;;;;;;;;
+;; Render wrappers
+
+(define (nanovg-render-start data)
+  (let ((w (frame-data-display-width data))
+	(h (frame-data-display-height data)))
+    (nvg:begin-frame! nanovg-context w h (/ w h))))
+
+(define (nanovg-render-eyes data)
+  (let ((w (frame-data-display-width data))
+	(mx (frame-data-mouse-x data))
+	(my (frame-data-mouse-y data))
+	(t (frame-data-time data)))
+    (draw-eyes nanovg-context (- w 250) 50 150 100 mx my t)))
+
+(define (nanovg-render-paragraph data)
   (let ((w (frame-data-display-width data))
 	(h (frame-data-display-height data))
 	(mx (frame-data-mouse-x data))
 	(my (frame-data-mouse-y data))
 	(t (frame-data-time data)))
-    (nvg:begin-frame! nanovg-context w h (/ w h))
+    (draw-paragraph nanovg-context (- w 450) 50 150 100 mx my)))
 
-    (draw-eyes nanovg-context (- w 250) 50 150 100 mx my t)
-    (draw-paragraph nanovg-context (- w 450) 50 150 100 mx my)
-    
-    (draw-window nanovg-context "Widgets 'n Stuff" 50 50 300 400)
-    (draw-search-box nanovg-context "Search" 60 95 280 25)
-    (draw-drop-down nanovg-context "Effects" 60 135 280 28)
+(define (nanovg-render-window data)
+  (draw-window nanovg-context "Widgets 'n Stuff" 50 50 300 400))
 
-    (nvg:end-frame! nanovg-context)))
+(define (nanovg-render-search-box data)
+  (draw-search-box nanovg-context "Search" 60 95 280 25))
 
-(render-thunks (cons 'nanovg-render (render-thunks)))
+(define (nanovg-render-drop-down data)
+  (draw-drop-down nanovg-context "Effects" 60 135 280 28))
+
+(define (nanovg-render-end data)
+  (nvg:end-frame! nanovg-context))
+
+(render-thunks
+ (append
+  '(nanovg-render-start
+    nanovg-render-eyes
+    nanovg-render-paragraph
+    nanovg-render-window
+    nanovg-render-search-box
+    nanovg-render-drop-down
+    nanovg-render-end)
+  (render-thunks))
+ (cons 'nanovg-render (render-thunks)))

@@ -490,7 +490,7 @@ ENDC
 (define (text-box! context x y break-row-width text #!optional (last-char-pointer #f))
   ((foreign-lambda void "nvgTextBox" context float float float (const c-string) (const c-pointer)) context x y break-row-width text last-char-pointer))
 
-(define (text-bounds! context x y string #!optional (last-char-pointer #f))
+(define (text-bounds context x y string #!optional (last-char-pointer #f))
   (let* ((buf (make-f32vector 4))
 	 (advance
 	  ((foreign-lambda void "nvgTextBounds" context float float (const c-string) (const c-pointer) f32vector)
