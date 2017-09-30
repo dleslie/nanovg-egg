@@ -127,9 +127,5 @@
 (include "demo.scm")
 
 ;; Start
-(cond-expand
-  (csi
-   (display "Run (main-loop) to start evaluation. Press escape to kill it.") (newline))
-  (else
-   (main-loop)))
+(main-loop)
 

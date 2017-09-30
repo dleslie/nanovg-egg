@@ -1,0 +1,4 @@
+;; nanovg.release-info -*- Scheme -*-
+(repo git "git@github.com:dleslie/nanovg-egg.git")
+(uri targz "https://github.com/dleslie/nanovg-egg/tarball/{egg-release}")
+(release "1.0.0")
