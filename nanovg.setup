@@ -1,7 +1,7 @@
 ;;; nanovg.setup -*- Scheme -*-
 (use make)
 
-(define current-version '0.0.1)
+(define current-version '1.0.0)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Config
