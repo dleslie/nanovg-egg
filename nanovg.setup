@@ -1,7 +1,7 @@
 ;;; nanovg.setup -*- Scheme -*-
 (use make)
 
-(define current-version '1.0.2)
+(define current-version '1.0.3)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Config
@@ -9,24 +9,41 @@
 
 (define standard-options '(-O3 -C -O3 -C -D_CRT_SECURE_NO_WARNINGS))
 
+(define gl-client
+  (cond-expand
+    ((or arm gles) "-Dgles -C -DGLES")
+    (else "")))
+
+(define gl-compile-options
+  (cond-expand
+    (macosx "-FOpenGL")
+    (else "")))
+
+(define gl-link-options
+  (cond-expand
+    (macosx "-framework OpenGL")
+    (windows "-lopengl32 -lglew32")
+    ((or arm gles) "-lGLESv2")
+    (else "-lGL")))
+
 (make
     (("nanovg/src/nanovg.o" ("nanovg/src/nanovg.c")
-      (compile -c -C -fPIC nanovg/src/nanovg.c))
+      (compile ,gl-compile-options -c -C -fPIC ,gl-client nanovg/src/nanovg.c))
      ("nanovg-gl2.import.so" ("nanovg.scm" "nanovg-gl2.scm")
       (begin
-	(compile -s -d1 -J -Dnanovg-gl2 ,@standard-options nanovg-gl2.scm nanovg/src/nanovg.o)
+	(compile ,gl-link-options -s -d1 -J -Dnanovg-gl2 ,@standard-options ,gl-client nanovg-gl2.scm nanovg/src/nanovg.o)
 	(compile -s -d0 -Dnanovg-gl2  ,@standard-options nanovg-gl2.import.scm)))
      ("nanovg-gl3.import.so" ("nanovg.scm" "nanovg-gl3.scm")
       (begin
-	(compile -s -d1 -J -Dnanovg-gl3 ,@standard-options nanovg-gl3.scm nanovg/src/nanovg.o)
+	(compile ,gl-link-options -s -d1 -J -Dnanovg-gl3 ,@standard-options ,gl-client nanovg-gl3.scm nanovg/src/nanovg.o)
 	(compile -s -d0 -Dnanovg-gl3 ,@standard-options nanovg-gl3.import.scm)))
      ("nanovg-gles2.import.so" ("nanovg.scm" "nanovg-gles2.scm")
       (begin
-	(compile -s -d1 -J -Dnanovg-gles2 ,@standard-options nanovg-gles2.scm nanovg/src/nanovg.o)
+	(compile ,gl-link-options -s -d1 -J -Dnanovg-gles2 ,@standard-options ,gl-client nanovg-gles2.scm nanovg/src/nanovg.o)
 	(compile -s -d0 -Dnanovg-gles2 ,@standard-options nanovg-gles2.import.scm)))
      ("nanovg-gles3.import.so" ("nanovg.scm" "nanovg-gles3.scm")
       (begin
-	(compile -s -d1 -J -Dnanovg-gles3 ,@standard-options nanovg-gles3.scm nanovg/src/nanovg.o)
+	(compile ,gl-link-options -s -d1 -J -Dnanovg-gles3 ,@standard-options ,gl-client nanovg-gles3.scm nanovg/src/nanovg.o)
 	(compile -s -d0 -Dnanovg-gles3 ,@standard-options nanovg-gles3.import.scm)))
      ("all" ("nanovg/src/nanovg.o" "nanovg-gl2.import.so" "nanovg-gl3.import.so" "nanovg-gles2.import.so" "nanovg-gles3.import.so")))
   "all")

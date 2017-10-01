@@ -4,10 +4,24 @@
 (require-extension srfi-4 srfi-1)
 
 (foreign-declare #<<ENDC
+
+#if defined (__APPLE__)
+#include <OpenGL/gl.h>
+#elif defined (_WIN32)
 #include <GL/glew.h>
+#include <GL/glext.h>
+#include <GL/gl.h>
+#elif defined (GLES)
+#include <GLES3/gl3.h>
+#else
+#include <GL/glew.h>
+#include <GL/gl.h>
+#endif
+
 #include "nanovg/src/nanovg.h"
 #include "nanovg/src/nanovg_gl.h"
 #include <string.h>
+
 ENDC
 )
 
