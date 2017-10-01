@@ -4,7 +4,7 @@
 (require-extension srfi-4 srfi-1)
 
 (foreign-declare #<<ENDC
-#include <GL/gl.h>
+#include <GL/glew.h>
 #include "nanovg/src/nanovg.h"
 #include "nanovg/src/nanovg_gl.h"
 #include <string.h>
@@ -53,18 +53,22 @@ ENDC
 (define-foreign-type context (c-pointer (struct "NVGcontext")))
 
 (define create-context*
-  (case nanovg-gl-version
-    ((gl2) (foreign-lambda* context ((int flags)) "C_return((intptr_t)nvgCreateGL2(flags));"))
-    ((gl3) (foreign-lambda* context ((int flags)) "C_return((intptr_t)nvgCreateGL3(flags));"))
-    ((gles2) (foreign-lambda* context ((int flags)) "C_return((intptr_t)nvgCreateGLES2(flags));"))
-    ((gles3) (foreign-lambda* context ((int flags)) "C_return((intptr_t)nvgCreateGLES3(flags));"))))
+  (cond-expand
+    (nanovg-gl2 
+     (foreign-lambda* context ((int flags)) "C_return((intptr_t)nvgCreateGL2(flags));"))
+    (nanovg-gl3
+     (foreign-lambda* context ((int flags)) "C_return((intptr_t)nvgCreateGL3(flags));"))
+    (nanovg-gles2
+     (foreign-lambda* context ((int flags)) "C_return((intptr_t)nvgCreateGLES2(flags));"))
+    (nanovg-gles3
+     (foreign-lambda* context ((int flags)) "C_return((intptr_t)nvgCreateGLES3(flags));"))))
 
 (define delete-context!
-  (case nanovg-gl-version
-    ((gl2) (foreign-lambda void "nvgDeleteGL2" context))
-    ((gl3) (foreign-lambda void "nvgDeleteGL3" context))
-    ((gles2) (foreign-lambda void "nvgDeleteGLES2" context))
-    ((gles3) (foreign-lambda void "nvgDeleteGLES3" context))))
+  (cond-expand
+    (nanovg-gl2 (foreign-lambda void "nvgDeleteGL2" context))
+    (nanovg-gl3 (foreign-lambda void "nvgDeleteGL3" context))
+    (nanovg-gles2 (foreign-lambda void "nvgDeleteGLES2" context))
+    (nanovg-gles3 (foreign-lambda void "nvgDeleteGLES3" context))))
 
 (define (create-context #!key (anti-alias #f) (stencil-strokes #f) (debug #f) (flags #f))
   (let* ((flags

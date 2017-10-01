@@ -14,20 +14,20 @@
       (compile -c -C -fPIC nanovg/src/nanovg.c))
      ("nanovg-gl2.import.so" ("nanovg.scm" "nanovg-gl2.scm")
       (begin
-	(compile -s -d1 -J ,@standard-options nanovg-gl2.scm nanovg/src/nanovg.o)
-	(compile -s -d0 ,@standard-options nanovg-gl2.import.scm)))
+	(compile -s -d1 -J -Dnanovg-gl2 ,@standard-options nanovg-gl2.scm nanovg/src/nanovg.o)
+	(compile -s -d0 -Dnanovg-gl2  ,@standard-options nanovg-gl2.import.scm)))
      ("nanovg-gl3.import.so" ("nanovg.scm" "nanovg-gl3.scm")
       (begin
-	(compile -s -d1 -J ,@standard-options nanovg-gl3.scm nanovg/src/nanovg.o)
-	(compile -s -d0 ,@standard-options nanovg-gl3.import.scm)))
+	(compile -s -d1 -J -Dnanovg-gl3 ,@standard-options nanovg-gl3.scm nanovg/src/nanovg.o)
+	(compile -s -d0 -Dnanovg-gl3 ,@standard-options nanovg-gl3.import.scm)))
      ("nanovg-gles2.import.so" ("nanovg.scm" "nanovg-gles2.scm")
       (begin
-	(compile -s -d1 -J ,@standard-options nanovg-gles2.scm nanovg/src/nanovg.o)
-	(compile -s -d0 ,@standard-options nanovg-gles2.import.scm)))
+	(compile -s -d1 -J -Dnanovg-gles2 ,@standard-options nanovg-gles2.scm nanovg/src/nanovg.o)
+	(compile -s -d0 -Dnanovg-gles2 ,@standard-options nanovg-gles2.import.scm)))
      ("nanovg-gles3.import.so" ("nanovg.scm" "nanovg-gles3.scm")
       (begin
-	(compile -s -d1 -J ,@standard-options nanovg-gles3.scm nanovg/src/nanovg.o)
-	(compile -s -d0 ,@standard-options nanovg-gles3.import.scm)))
+	(compile -s -d1 -J -Dnanovg-gles3 ,@standard-options nanovg-gles3.scm nanovg/src/nanovg.o)
+	(compile -s -d0 -Dnanovg-gles3 ,@standard-options nanovg-gles3.import.scm)))
      ("all" ("nanovg/src/nanovg.o" "nanovg-gl2.import.so" "nanovg-gl3.import.so" "nanovg-gles2.import.so" "nanovg-gles3.import.so")))
   "all")
 
